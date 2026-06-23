@@ -50,3 +50,4 @@ flutter:
     - assets/animation/onboarding3.lottie
     - assets/animation/start.lottie
     - assets/animation/rest.lottie
+    - "assets/animation/Empty Notifications.lottie"

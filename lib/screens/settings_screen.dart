@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,7 +14,6 @@ import 'privacy_policy_screen.dart';
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
-  // ── Constants ──
   static const _appVersion = 'Beta 1.0.0';
   static const _packageName = 'com.adithya.glowup';
   static const _playStoreUrl =
@@ -28,33 +28,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: context.appBackground,
       body: SafeArea(
         child: ListView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Settings',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
+              style: GoogleFonts.poppins(
+                color: context.appTextPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Customize your app experience',
               style: TextStyle(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withAlpha(160),
+                color: context.appTextSecondary,
                 fontSize: 15,
               ),
             ),
             const SizedBox(height: 32),
 
-            // ── Appearance ──
             _sectionTitle('Appearance'),
             const SizedBox(height: 14),
             ListenableBuilder(
@@ -85,13 +83,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 32),
 
-            // ── Account ──
             _sectionTitle('Account'),
             const SizedBox(height: 14),
             _buildAccountSection(context),
             const SizedBox(height: 32),
 
-            // ── Support Us ──
             _sectionTitle('Support us'),
             const SizedBox(height: 14),
             _supportCard(context, [
@@ -125,7 +121,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ]),
             const SizedBox(height: 24),
 
-            // ── Danger Zone ──
             _supportCard(context, [
               _supportTile(
                 context,
@@ -138,7 +133,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ]),
             const SizedBox(height: 24),
 
-            // ── Version ──
             Center(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 30),
@@ -158,13 +152,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-
-  // ────────────────────────── Section Helpers ──────────────────────────
-
   Widget _sectionTitle(String title) {
     return Text(
       title,
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: AppColors.primary,
@@ -175,9 +166,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _supportCard(BuildContext context, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        color: context.appCardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: context.appDivider),
       ),
       child: Column(children: children),
     );
@@ -188,7 +179,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       height: 1,
       thickness: 0.5,
       indent: 60,
-      color: Theme.of(context).dividerColor,
+      color: context.appDivider,
     );
   }
 
@@ -200,8 +191,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color? iconColor,
     Color? textColor,
   }) {
-    final effectiveIconColor = iconColor ?? AppColors.secondary;
-    final effectiveTextColor = textColor ?? Theme.of(context).textTheme.bodyLarge?.color;
+    final effectiveIconColor = iconColor ?? AppColors.primary;
+    final effectiveTextColor = textColor ?? context.appTextPrimary;
 
     return InkWell(
       onTap: onTap,
@@ -233,15 +224,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ────────────────────────── Account Section ──────────────────────────
-
   Widget _buildAccountSection(BuildContext context) {
     final authService = AuthService();
     final isSignedIn = authService.isSignedIn;
+    final userName = DataService().userName;
 
     if (isSignedIn) {
+      final displayName = userName.isNotEmpty
+          ? userName
+          : authService.displayName.isNotEmpty
+              ? authService.displayName
+              : 'User';
+
       return _supportCard(context, [
-        // User info row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           child: Row(
@@ -250,9 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 radius: 22,
                 backgroundColor: AppColors.primary.withAlpha(25),
                 child: Text(
-                  authService.displayName.isNotEmpty
-                      ? authService.displayName[0].toUpperCase()
-                      : '?',
+                  displayName[0].toUpperCase(),
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -266,10 +259,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      authService.displayName.isNotEmpty
-                          ? authService.displayName
-                          : 'User',
-                      style: const TextStyle(
+                      displayName,
+                      style: TextStyle(
+                        color: context.appTextPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -325,8 +317,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ────────────────────────── Actions ──────────────────────────
-
   void _shareApp() {
     SharePlus.instance.share(
       ShareParams(
@@ -365,13 +355,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: context.appCardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           'Delete all data?',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: context.appTextPrimary,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        content: const Text(
+        content: Text(
           'This will reset all your progress, streaks, and settings. This action cannot be undone.',
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
@@ -407,13 +402,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ────────────────────────── Auth Actions ──────────────────────────
-
   void _navigateToSignIn(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const AuthScreen()),
     ).then((_) {
-      // Refresh UI after returning from auth screen
       if (mounted) setState(() {});
     });
   }
@@ -422,13 +414,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: context.appCardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           'Sign Out?',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: context.appTextPrimary,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        content: const Text(
+        content: Text(
           'You can sign back in anytime. Your local progress will be kept.',
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
@@ -462,21 +459,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: context.appCardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.primary, size: 28),
-            SizedBox(width: 10),
+            const Icon(Icons.warning_amber_rounded, color: AppColors.primary, size: 28),
+            const SizedBox(width: 10),
             Text(
               'Delete Account?',
-              style: TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: context.appTextPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
-        content: const Text(
+        content: Text(
           'This will permanently delete your account and all associated data. '
           'Your local progress will also be erased.\n\n'
           'This action cannot be undone.',
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
@@ -517,7 +519,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await AuthService().deleteAccount();
       await DataService().clearAllData();
       if (context.mounted) {
-        Navigator.of(context).pop(); // dismiss loading
+        Navigator.of(context).pop();
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const OnboardingScreen()),
           (route) => false,
@@ -568,10 +570,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withAlpha(20)
-              : Theme.of(context).cardTheme.color,
+              : context.appCardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Theme.of(context).dividerColor,
+            color: isSelected ? AppColors.primary : context.appDivider,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -582,12 +584,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.primary.withAlpha(30)
-                    : Theme.of(context).dividerColor.withAlpha(60),
+                    : context.appDivider.withAlpha(60),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? AppColors.primary : AppColors.textHint,
+                color: isSelected ? AppColors.primary : context.appTextHint,
                 size: 26,
               ),
             ),
@@ -598,7 +600,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
+                      color: context.appTextPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -607,7 +610,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(140),
+                      color: context.appTextSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -622,7 +625,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: isSelected ? AppColors.primary : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.textHint,
+                  color: isSelected ? AppColors.primary : context.appTextHint,
                   width: 2,
                 ),
               ),
@@ -638,10 +641,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Rate Us Dialog — custom star-rating popup
-// ══════════════════════════════════════════════════════════════════════
-
 class _RateUsDialog extends StatefulWidget {
   const _RateUsDialog();
 
@@ -656,17 +655,27 @@ class _RateUsDialogState extends State<_RateUsDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Theme.of(context).cardTheme.color ?? Colors.white,
+      backgroundColor: context.appCardColor,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Emoji
-            const Text('😃', style: TextStyle(fontSize: 56)),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(20),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.sentiment_very_satisfied_rounded,
+                color: AppColors.primary,
+                size: 40,
+              ),
+            ),
             const SizedBox(height: 20),
 
-            // Message
             Text(
               'We are working hard for a better user experience.\nWe\'d greatly appreciate if you can rate us.',
               textAlign: TextAlign.center,
@@ -674,36 +683,32 @@ class _RateUsDialogState extends State<_RateUsDialog> {
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 height: 1.45,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
+                color: context.appTextPrimary,
               ),
             ),
             const SizedBox(height: 12),
 
-            // "The best we can get" hint with arrow
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   'The best we can get :)',
                   style: TextStyle(
-                    color: Colors.orange.shade600,
+                    color: AppColors.primary,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  '↘',
-                  style: TextStyle(
-                    color: Colors.orange.shade600,
-                    fontSize: 18,
-                  ),
+                Icon(
+                  Icons.south_east_rounded,
+                  color: AppColors.primary,
+                  size: 16,
                 ),
               ],
             ),
             const SizedBox(height: 12),
 
-            // Star row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
@@ -727,7 +732,6 @@ class _RateUsDialogState extends State<_RateUsDialog> {
             ),
             const SizedBox(height: 20),
 
-            // Rate button
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -735,7 +739,6 @@ class _RateUsDialogState extends State<_RateUsDialog> {
                 onPressed: _selectedStars > 0
                     ? () async {
                         Navigator.of(context).pop();
-                        // If 4-5 stars, send to Play Store
                         if (_selectedStars >= 4) {
                           final uri = Uri.parse(
                             'https://play.google.com/store/apps/details?id=${SettingsScreen._packageName}',
@@ -748,10 +751,10 @@ class _RateUsDialogState extends State<_RateUsDialog> {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
-                  foregroundColor: Colors.black,
-                  disabledBackgroundColor: AppColors.secondary.withAlpha(80),
-                  disabledForegroundColor: Colors.black38,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.primary.withAlpha(80),
+                  disabledForegroundColor: Colors.white38,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),

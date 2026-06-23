@@ -5,6 +5,7 @@ import 'config/theme_notifier.dart';
 import 'services/data_service.dart';
 import 'services/auth_service.dart';
 import 'services/ad_service.dart';
+import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/health_metrics_screen.dart';
@@ -18,14 +19,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await DataService().init();
+  await NotificationService().init();
   await AdService().init();
   if (AuthService().isSignedIn) {
     try {
       await DataService().syncToFirestore();
-    } catch (_) {
-      // Sync may fail due to permissions or network issues; continue startup
-    }
+    } catch (_) {}
   }
+  await NotificationService().checkStreakBroken(
+    previousStreak: DataService().currentStreak,
+    lastWorkoutDate: DataService().lastWorkoutDate,
+  );
   runApp(const GlowUpApp());
 }
 

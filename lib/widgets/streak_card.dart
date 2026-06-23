@@ -14,45 +14,46 @@ class StreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withAlpha(40),
-            context.appCardColor,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: context.appCardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.appDivider),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(40),
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.primary.withAlpha(25),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.local_fire_department_rounded,
               color: AppColors.primary,
-              size: 32,
+              size: 26,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
                       '$currentStreak',
                       style: const TextStyle(
                         color: AppColors.primary,
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -67,7 +68,7 @@ class StreakCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   'Best: $bestStreak days',
                   style: TextStyle(
@@ -78,11 +79,13 @@ class StreakCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.emoji_events_rounded,
-            color: AppColors.secondary,
-            size: 28,
+            color: AppColors.warning,
+            size: 26,
           ),
+          const SizedBox(width: 8),
+          
         ],
       ),
     );

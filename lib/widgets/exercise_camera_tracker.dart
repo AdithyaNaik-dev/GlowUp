@@ -226,7 +226,6 @@ class _ExerciseCameraTrackerState extends State<ExerciseCameraTracker> {
     final hasGuidance = snapshot.guidanceHint != null;
 
     return Container(
-      height: 380,
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.black,

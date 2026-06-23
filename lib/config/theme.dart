@@ -30,7 +30,7 @@ class AppTheme {
       ),
       textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         centerTitle: true,
         shape: const RoundedRectangleBorder(
@@ -40,11 +40,11 @@ class AppTheme {
           ),
         ),
         titleTextStyle: GoogleFonts.poppins(
-          color: Colors.black,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -82,7 +82,7 @@ class AppTheme {
       ),
       textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         centerTitle: true,
         shape: const RoundedRectangleBorder(
@@ -92,11 +92,11 @@ class AppTheme {
           ),
         ),
         titleTextStyle: GoogleFonts.poppins(
-          color: Colors.black,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

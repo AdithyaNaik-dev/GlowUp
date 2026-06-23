@@ -38,11 +38,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   int _repCount = 0;
 
-  // Timer for timer-based exercises
   int _exerciseTimerSeconds = 0;
   Timer? _exerciseTimer;
 
-  // Tip timer
   Timer? _tipTimer;
   bool _isVoiceMuted = false;
 
@@ -53,10 +51,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _exercises = _dataService.getExercisesForDayWithReps(widget.day);
     final plan = _dataService.getDayPlan(widget.day);
     _restBetween = plan?.restBetween ?? 15;
-
-    // Removed pulse animation as it's now handled by the lottie animation
-
-    // exercises loaded
   }
 
   @override
@@ -69,8 +63,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     super.dispose();
   }
 
-  ExerciseMode _getMode(Exercise ex) =>
-      getExerciseMode(ex.name);
+  ExerciseMode _getMode(Exercise ex) => getExerciseMode(ex.name);
 
   bool _isFace(Exercise ex) => isFaceExercise(ex.name);
 
@@ -89,13 +82,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     final mode = _getMode(exercise);
 
-    // Start exercise timer for timer-based exercises
     if (mode == ExerciseMode.timerBased) {
       _exerciseTimerSeconds = exercise.duration;
       _startExerciseCountdown(exercise);
     }
 
-    // Start periodic tip timer
     _tipTimer?.cancel();
     _tipTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (!_isPaused && !_isResting) {
@@ -103,7 +94,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       }
     });
 
-    // TTS announcement
     _voiceCoach.announceExerciseStart(
       exerciseName: exercise.name,
       voiceInstruction: exercise.voiceInstruction,
@@ -127,9 +117,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       setState(() {
         if (_exerciseTimerSeconds > 0) {
           _exerciseTimerSeconds--;
-          // Tick sound
           SystemSound.play(SystemSoundType.click);
-          // TTS countdown
           _voiceCoach.announceTimerCountdown(_exerciseTimerSeconds);
         } else {
           timer.cancel();
@@ -145,7 +133,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     _voiceCoach.announceRest(
       _restBetween,
-      _currentIndex < _exercises.length ? _exercises[_currentIndex].name : 'finish',
+      _currentIndex < _exercises.length
+          ? _exercises[_currentIndex].name
+          : 'finish',
     );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -153,7 +143,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         setState(() {
           if (_timeRemaining > 0) {
             _timeRemaining--;
-            // Tick sound during rest
             if (_timeRemaining <= 3 && _timeRemaining > 0) {
               SystemSound.play(SystemSoundType.click);
             }
@@ -220,10 +209,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     if (!mounted || _isResting) return;
 
     final mode = _getMode(exercise);
-    if (mode == ExerciseMode.timerBased) {
-      // Timer-based exercises are controlled by the countdown timer
-      return;
-    }
+    if (mode == ExerciseMode.timerBased) return;
 
     final repIncreased = snapshot.repCount > _repCount;
 
@@ -232,12 +218,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     });
 
     if (repIncreased) {
-      // Tick sound on rep
       SystemSound.play(SystemSoundType.click);
       _voiceCoach.announceRep(snapshot.repCount, exercise.reps);
     }
 
-    // Check completion
     final targetReached = snapshot.isHoldExercise
         ? snapshot.holdSeconds >= exercise.duration
         : snapshot.repCount >= exercise.reps;
@@ -277,44 +261,29 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       bottomNavigationBar: const BannerAdWidget(),
       appBar: AppBar(
         title: Text('Day ${widget.day}'),
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          onPressed: () => _showExitDialog(),
-        ),
-        actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withAlpha(30),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${_currentIndex + 1} / ${_exercises.length}',
-                  style: TextStyle(
-                    color: AppColors.secondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(40),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.close_rounded, size: 20),
+              onPressed: () => _showExitDialog(),
+              padding: EdgeInsets.zero,
             ),
           ),
-        ],
+        ),
       ),
       body: !_isStarted
           ? _buildStartView(exercise)
           : _isResting
-          ? _buildRestView()
-          : _buildExerciseView(exercise),
+              ? _buildRestView()
+              : _buildExerciseView(exercise),
     );
   }
 
-  // ═══════════════════════════════════════════
-  //  START VIEW
-  // ═══════════════════════════════════════════
   Widget _buildStartView(Exercise exercise) {
     return SafeArea(
       child: Padding(
@@ -322,7 +291,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         child: Column(
           children: [
             const SizedBox(height: 16),
-            // Start workout lottie animation
             GestureDetector(
               onTap: _startWorkout,
               child: SizedBox(
@@ -357,7 +325,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               style: TextStyle(color: context.appTextSecondary, fontSize: 15),
             ),
             const SizedBox(height: 16),
-            // Exercise list
             Expanded(
               child: ListView.builder(
                 itemCount: _exercises.length,
@@ -415,8 +382,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               child: ElevatedButton(
                 onPressed: _startWorkout,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -437,59 +404,35 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  // ═══════════════════════════════════════════
-  //  EXERCISE VIEW
-  // ═══════════════════════════════════════════
   Widget _buildExerciseView(Exercise exercise) {
     final mode = _getMode(exercise);
 
     return SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                // Progress bar
-                _buildProgressBar(),
-                const SizedBox(height: 16),
-                // Exercise info header
-                _buildExerciseHeader(exercise, mode),
-                const SizedBox(height: 16),
-
-                // Camera tracker
-                ExerciseCameraTracker(
-                  exercise: exercise,
-                  isPaused: _isPaused,
-                  onSnapshot: (snapshot) =>
-                      _onTrackingSnapshot(snapshot, exercise),
-                ),
-                const SizedBox(height: 20),
-
-                // Stats display
-                _buildStatsCard(exercise, mode),
-                const SizedBox(height: 20),
-
-                // Controls
-                _buildControls(mode),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'Note: AI might not detect movements perfectly. If you have completed the exercise, tap Next. Tapping Next will start the rest timer.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.appTextHint,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 6),
+            _buildProgressBar(),
+            const SizedBox(height: 10),
+            _buildExerciseHeader(exercise, mode),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ExerciseCameraTracker(
+                exercise: exercise,
+                isPaused: _isPaused,
+                onSnapshot: (snapshot) =>
+                    _onTrackingSnapshot(snapshot, exercise),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            _buildStatsCard(exercise, mode),
+            const SizedBox(height: 14),
+            _buildControls(mode),
+            const SizedBox(height: 8),
+            _buildNoteSection(),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -501,8 +444,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       child: LinearProgressIndicator(
         value: (_currentIndex + 1) / _exercises.length,
         minHeight: 6,
-        backgroundColor: context.appSurface,
-        valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+        backgroundColor: context.isDark
+            ? context.appSurface
+            : const Color(0xFFFFE0CC),
+        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
       ),
     );
   }
@@ -515,34 +460,65 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         Expanded(
           child: Text(
             exercise.name,
-            style: Theme.of(context).textTheme.titleLarge,
+            style: TextStyle(
+              color: context.appTextPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-        IconButton(
-          icon: Icon(
-            Icons.info_outline_rounded,
-            color: Colors.grey[400],
-            size: 22,
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: context.appDivider,
+              width: 1.5,
+            ),
           ),
-          onPressed: () => _showExerciseInfo(exercise),
+          child: IconButton(
+            icon: Icon(
+              Icons.info_outline_rounded,
+              color: context.appTextHint,
+              size: 20,
+            ),
+            onPressed: () => _showExerciseInfo(exercise),
+            padding: EdgeInsets.zero,
+          ),
         ),
-        IconButton(
-          icon: Icon(
-            isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            color: isLiked ? AppColors.primary : Colors.grey[400],
+        const SizedBox(width: 10),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isLiked ? AppColors.primary : context.appDivider,
+              width: 1.5,
+            ),
           ),
-          onPressed: () async {
-            await _dataService.toggleLikeExercise(exercise.id);
-            if (mounted) {
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(isLiked ? 'Removed from liked' : 'Added to liked'),
-                  duration: const Duration(milliseconds: 1000),
-                ),
-              );
-            }
-          },
+          child: IconButton(
+            icon: Icon(
+              isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: isLiked ? AppColors.primary : context.appTextHint,
+              size: 20,
+            ),
+            onPressed: () async {
+              await _dataService.toggleLikeExercise(exercise.id);
+              if (mounted) {
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content:
+                        Text(isLiked ? 'Removed from liked' : 'Added to liked'),
+                    duration: const Duration(milliseconds: 1000),
+                  ),
+                );
+              }
+            },
+            padding: EdgeInsets.zero,
+          ),
         ),
       ],
     );
@@ -562,7 +538,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       builder: (ctx) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
         child: Column(
@@ -594,7 +571,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
-                    exercise.category == 'face' ? Icons.face : Icons.fitness_center,
+                    exercise.category == 'face'
+                        ? Icons.face
+                        : Icons.fitness_center,
                     size: 64,
                     color: Colors.grey[400],
                   ),
@@ -615,7 +594,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: difficultyColor.withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
@@ -651,14 +631,14 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           width: 24,
                           height: 24,
                           decoration: BoxDecoration(
-                            color: AppColors.secondary.withAlpha(25),
+                            color: AppColors.primary.withAlpha(25),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               '${entry.key + 1}',
-                              style: TextStyle(
-                                color: AppColors.secondary,
+                              style: const TextStyle(
+                                color: AppColors.primary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -695,7 +675,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(ctx),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -703,7 +684,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 child: const Text(
                   'Got it!',
                   style: TextStyle(
-                    color: Colors.black,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -724,23 +704,27 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       decoration: BoxDecoration(
         color: context.appCardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.appDivider),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Main stat
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (isTimer) ...[
-                // Timer countdown
                 Text(
                   '$_exerciseTimerSeconds',
                   style: TextStyle(
                     color: _exerciseTimerSeconds <= 5
-                        ? AppColors.primary
-                        : AppColors.secondary,
+                        ? AppColors.primaryDark
+                        : AppColors.primary,
                     fontSize: 56,
                     fontWeight: FontWeight.w900,
                   ),
@@ -758,11 +742,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ),
               ] else ...[
-                // Rep count
                 Text(
                   '$_repCount',
-                  style: TextStyle(
-                    color: AppColors.secondary,
+                  style: const TextStyle(
+                    color: AppColors.primary,
                     fontSize: 56,
                     fontWeight: FontWeight.w900,
                   ),
@@ -782,7 +765,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ],
           ),
           const SizedBox(height: 8),
-          // Target info
           Text(
             isTimer
                 ? '${exercise.name} • Hold ${exercise.duration}s'
@@ -793,21 +775,45 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 12),
-          // Progress bar for current exercise
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: isTimer
-                  ? (exercise.duration > 0
-                      ? 1 - (_exerciseTimerSeconds / exercise.duration)
-                      : 0)
-                  : (exercise.reps > 0
-                      ? _repCount / exercise.reps
-                      : 0),
-              minHeight: 6,
-              backgroundColor: context.appSurface,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoteSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withAlpha(15),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('💡', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  color: context.appTextSecondary,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Note: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: context.appTextPrimary,
+                    ),
+                  ),
+                  const TextSpan(
+                    text:
+                        'AI might not detect movements perfectly. If you have completed the exercise, tap Next. Tapping Next will start the rest timer.',
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -815,9 +821,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  // ═══════════════════════════════════════════
-  //  REST VIEW
-  // ═══════════════════════════════════════════
   Widget _buildRestView() {
     return SafeArea(
       child: Padding(
@@ -825,13 +828,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Header
             Column(
               children: [
-                Text(
+                const Text(
                   'Take a Break',
                   style: TextStyle(
-                    color: AppColors.secondary,
+                    color: AppColors.primary,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
@@ -846,13 +848,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 ),
               ],
             ),
-
-            // Center: Animation and Timer
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Rest animation
                   SizedBox(
                     width: 280,
                     height: 280,
@@ -871,21 +870,20 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     ),
                   ),
                   const SizedBox(height: 32),
-                  // Timer display
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.secondary.withAlpha(25),
-                          AppColors.secondary.withAlpha(10),
+                          AppColors.primary.withAlpha(25),
+                          AppColors.primary.withAlpha(10),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: AppColors.secondary.withAlpha(40),
+                        color: AppColors.primary.withAlpha(40),
                         width: 1,
                       ),
                     ),
@@ -893,8 +891,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       children: [
                         Text(
                           '$_timeRemaining',
-                          style: TextStyle(
-                            color: AppColors.secondary,
+                          style: const TextStyle(
+                            color: AppColors.primary,
                             fontSize: 68,
                             fontWeight: FontWeight.w900,
                             height: 1,
@@ -915,8 +913,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 ],
               ),
             ),
-
-            // Bottom: Next exercise and buttons
             Column(
               children: [
                 Container(
@@ -951,16 +947,17 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => _showExerciseInfo(_exercises[_currentIndex]),
+                            onTap: () =>
+                                _showExerciseInfo(_exercises[_currentIndex]),
                             child: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: AppColors.secondary.withAlpha(20),
+                                color: AppColors.primary.withAlpha(20),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.info_outline_rounded,
-                                color: AppColors.secondary,
+                                color: AppColors.primary,
                                 size: 18,
                               ),
                             ),
@@ -990,8 +987,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: context.appSurface,
-                          foregroundColor: AppColors.secondary,
-                          side: BorderSide(color: AppColors.secondary, width: 1.5),
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(
+                              color: AppColors.primary, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -1018,8 +1016,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary,
-                          foregroundColor: Colors.black,
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -1036,14 +1034,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  // ═══════════════════════════════════════════
-  //  CONTROLS
-  // ═══════════════════════════════════════════
   Widget _buildControls(ExerciseMode mode) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // Voice button (toggle mute)
         GestureDetector(
           onTap: _toggleVoiceMute,
           child: Column(
@@ -1052,13 +1046,24 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: (_isVoiceMuted ? context.appSurface : AppColors.secondary).withAlpha(20),
+                  color: (_isVoiceMuted
+                          ? context.appSurface
+                          : AppColors.primary)
+                      .withAlpha(20),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: (_isVoiceMuted ? context.appDivider : AppColors.secondary).withAlpha(40)),
+                  border: Border.all(
+                      color: (_isVoiceMuted
+                              ? context.appDivider
+                              : AppColors.primary)
+                          .withAlpha(40)),
                 ),
                 child: Icon(
-                  _isVoiceMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                  color: _isVoiceMuted ? context.appTextHint : AppColors.secondary,
+                  _isVoiceMuted
+                      ? Icons.volume_off_rounded
+                      : Icons.volume_up_rounded,
+                  color: _isVoiceMuted
+                      ? context.appTextHint
+                      : AppColors.primary,
                   size: 26,
                 ),
               ),
@@ -1074,20 +1079,17 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ],
           ),
         ),
-        // Pause/Resume
         GestureDetector(
           onTap: _togglePause,
           child: Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryDark],
-              ),
+              color: AppColors.primary,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.secondary.withAlpha(50),
+                  color: AppColors.primary.withAlpha(50),
                   blurRadius: 16,
                   spreadRadius: 2,
                 ),
@@ -1100,11 +1102,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ),
           ),
         ),
-        // Next/Done button
         _controlButton(
           Icons.skip_next_rounded,
           'Next',
-          AppColors.secondary,
+          AppColors.primary,
           _nextExercise,
         ),
       ],
@@ -1150,7 +1151,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: context.appCardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Quit Workout?',
           style: TextStyle(color: context.appTextPrimary),
@@ -1164,7 +1166,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Continue',
-              style: TextStyle(color: AppColors.secondary),
+              style: TextStyle(color: context.appTextSecondary),
             ),
           ),
           TextButton(

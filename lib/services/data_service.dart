@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/exercise.dart';
 import '../models/day_plan.dart';
+import 'notification_service.dart';
 import 'workout_generator_service.dart';
 
 class DataService {
@@ -145,6 +146,11 @@ class DataService {
       }
       int earnedPoints = (100 * multiplier).round();
       await addPoints(earnedPoints);
+
+      await NotificationService().onWorkoutComplete(
+        day: day,
+        streak: currentStreak,
+      );
     }
   }
 
@@ -215,10 +221,9 @@ class DataService {
     final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
     final docSnap = await docRef.get();
     
-    String name = user.displayName ?? '';
-    if (name.trim().isEmpty) {
-      name = user.email?.split('@').first ?? 'User';
-    }
+    String name = userName;
+    if (name.trim().isEmpty) name = user.displayName ?? '';
+    if (name.trim().isEmpty) name = user.email?.split('@').first ?? 'User';
 
     if (!docSnap.exists) {
       await docRef.set({
@@ -304,6 +309,12 @@ class DataService {
 
   Future<void> setFitnessLevel(String level) async {
     await _prefs?.setString('fitness_level', level);
+  }
+
+  String get userName => _prefs?.getString('user_name') ?? '';
+
+  Future<void> setUserName(String name) async {
+    await _prefs?.setString('user_name', name);
   }
 
   // --- Health Metrics ---

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 
@@ -16,6 +17,7 @@ class ReportScreen extends StatelessWidget {
     final totalMinutes = completedDays.length * 30;
 
     return Scaffold(
+      backgroundColor: context.appBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -25,33 +27,23 @@ class ReportScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                const Text(
-                  'REPORT',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+                Text(
+                  'Report',
+                  style: GoogleFonts.poppins(
+                    color: context.appTextPrimary,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // ── Summary stat cards ──
                 _buildSummaryRow(context, completedDays, totalExercises, totalMinutes),
                 const SizedBox(height: 24),
-
-                // ── History section ──
                 _buildHistorySection(context, dataService, completedDays, currentStreak),
                 const SizedBox(height: 24),
-
-                // ── Progress section ──
                 _buildProgressSection(context, progress, completedDays.length),
                 const SizedBox(height: 24),
-
-                // ── Streak & Records ──
                 _buildStreakSection(context, currentStreak, bestStreak, completedDays.length),
                 const SizedBox(height: 24),
-
-                // ── Completed workouts ──
                 _buildCompletedSection(context, dataService, completedDays),
                 const SizedBox(height: 30),
               ],
@@ -62,16 +54,14 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────── Summary Row (Workout / Exercises / Minutes) ───────────────
-
   Widget _buildSummaryRow(
       BuildContext context, Set<int> completedDays, int totalExercises, int totalMinutes) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        color: context.appCardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: context.appDivider),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -80,10 +70,10 @@ class ReportScreen extends StatelessWidget {
               '${completedDays.length}', 'Workout', AppColors.primary),
           _verticalDivider(context),
           _summaryItem(context, Icons.local_fire_department_rounded,
-              '$totalExercises', 'Exercises', Colors.orange),
+              '$totalExercises', 'Exercises', const Color(0xFFFF9800)),
           _verticalDivider(context),
           _summaryItem(context, Icons.timer_rounded,
-              '$totalMinutes', 'Minute', AppColors.secondary),
+              '$totalMinutes', 'Minute', const Color(0xFF2196F3)),
         ],
       ),
     );
@@ -97,7 +87,8 @@ class ReportScreen extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
+            color: context.appTextPrimary,
             fontSize: 26,
             fontWeight: FontWeight.w800,
           ),
@@ -118,11 +109,9 @@ class ReportScreen extends StatelessWidget {
     return Container(
       height: 50,
       width: 1,
-      color: Theme.of(context).dividerColor,
+      color: context.appDivider,
     );
   }
-
-  // ─────────────── History (Calendar Week + Streak) ───────────────
 
   Widget _buildHistorySection(
       BuildContext context, DataService dataService, Set<int> completedDays, int streak) {
@@ -132,9 +121,10 @@ class ReportScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'History',
               style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
@@ -142,7 +132,7 @@ class ReportScreen extends StatelessWidget {
             Text(
               'All records',
               style: TextStyle(
-                color: AppColors.secondary,
+                color: AppColors.primary,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -153,16 +143,14 @@ class ReportScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
+            color: context.appCardColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Theme.of(context).dividerColor),
+            border: Border.all(color: context.appDivider),
           ),
           child: Column(
             children: [
-              // Week view
               _buildWeekCalendar(context, completedDays, dataService),
-              Divider(color: Theme.of(context).dividerColor, height: 28),
-              // Day streak
+              Divider(color: context.appDivider, height: 28),
               Row(
                 children: [
                   Text(
@@ -177,11 +165,13 @@ class ReportScreen extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Text('🔥', style: TextStyle(fontSize: 20)),
+                  const Icon(Icons.local_fire_department_rounded,
+                      color: Color(0xFFFF9800), size: 22),
                   const SizedBox(width: 6),
                   Text(
                     '$streak',
-                    style: const TextStyle(
+                    style: TextStyle(
+                      color: context.appTextPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                     ),
@@ -198,7 +188,6 @@ class ReportScreen extends StatelessWidget {
   Widget _buildWeekCalendar(
       BuildContext context, Set<int> completedDays, DataService dataService) {
     final now = DateTime.now();
-    // Find the start of the current week (Sunday)
     final weekStart = now.subtract(Duration(days: now.weekday % 7));
     final dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     final currentDay = dataService.currentDay;
@@ -211,7 +200,6 @@ class ReportScreen extends StatelessWidget {
             date.month == now.month &&
             date.year == now.year;
 
-        // Map calendar date to challenge day for highlighting
         final dayDiff = date.difference(now).inDays;
         final challengeDay = currentDay + dayDiff;
         final isCompleted = completedDays.contains(challengeDay);
@@ -232,13 +220,13 @@ class ReportScreen extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 color: isCompleted
-                    ? AppColors.secondary
+                    ? AppColors.primary
                     : isToday
-                        ? AppColors.secondary.withAlpha(30)
+                        ? AppColors.primary.withAlpha(30)
                         : Colors.transparent,
                 shape: BoxShape.circle,
                 border: isToday && !isCompleted
-                    ? Border.all(color: AppColors.secondary, width: 1.5)
+                    ? Border.all(color: AppColors.primary, width: 1.5)
                     : null,
               ),
               child: Center(
@@ -246,10 +234,10 @@ class ReportScreen extends StatelessWidget {
                   '${date.day}',
                   style: TextStyle(
                     color: isCompleted
-                        ? Colors.black
+                        ? Colors.white
                         : isToday
-                            ? AppColors.secondary
-                            : Theme.of(context).textTheme.bodyLarge?.color,
+                            ? AppColors.primary
+                            : context.appTextPrimary,
                     fontSize: 15,
                     fontWeight:
                         isToday || isCompleted ? FontWeight.w700 : FontWeight.w500,
@@ -263,8 +251,6 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────── Progress ───────────────
-
   Widget _buildProgressSection(
       BuildContext context, double progress, int completedDays) {
     return Column(
@@ -273,9 +259,10 @@ class ReportScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Challenge Progress',
               style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
@@ -283,13 +270,13 @@ class ReportScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.secondary.withAlpha(30),
+                color: AppColors.primary.withAlpha(25),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '${(progress * 100).toStringAsFixed(0)}%',
-                style: TextStyle(
-                  color: AppColors.secondary,
+                style: const TextStyle(
+                  color: AppColors.primary,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -301,13 +288,12 @@ class ReportScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
+            color: context.appCardColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Theme.of(context).dividerColor),
+            border: Border.all(color: context.appDivider),
           ),
           child: Column(
             children: [
-              // Current / Heaviest / Lightest style row (repurposed)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -325,7 +311,8 @@ class ReportScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Day $completedDays',
-                          style: const TextStyle(
+                          style: TextStyle(
+                            color: context.appTextPrimary,
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
                           ),
@@ -351,19 +338,19 @@ class ReportScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              // Progress bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 10,
-                  backgroundColor: Theme.of(context).dividerColor,
+                  backgroundColor: context.isDark
+                      ? context.appSurface
+                      : const Color(0xFFEEEEEE),
                   valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                      const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
               const SizedBox(height: 12),
-              // Phase labels
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -394,7 +381,8 @@ class ReportScreen extends StatelessWidget {
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
+            color: context.appTextPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -413,10 +401,10 @@ class ReportScreen extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: completed
-                ? AppColors.secondary
+                ? AppColors.primary
                 : started
-                    ? AppColors.primary
-                    : Theme.of(context).dividerColor,
+                    ? AppColors.primary.withAlpha(120)
+                    : context.appDivider,
           ),
         ),
         const SizedBox(height: 4),
@@ -431,8 +419,6 @@ class ReportScreen extends StatelessWidget {
       ],
     );
   }
-
-  // ─────────────── Streak & Records ───────────────
 
   Widget _buildStreakSection(
       BuildContext context, int currentStreak, int bestStreak, int completedDays) {
@@ -454,7 +440,7 @@ class ReportScreen extends StatelessWidget {
             icon: Icons.emoji_events_rounded,
             value: '$bestStreak',
             label: 'Best\nStreak',
-            color: Colors.orange,
+            color: const Color(0xFFFF9800),
           ),
         ),
         const SizedBox(width: 12),
@@ -481,9 +467,9 @@ class ReportScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        color: context.appCardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: context.appDivider),
       ),
       child: Column(
         children: [
@@ -498,7 +484,8 @@ class ReportScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
+              color: context.appTextPrimary,
               fontSize: 24,
               fontWeight: FontWeight.w800,
             ),
@@ -518,16 +505,15 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────── Completed Workouts ───────────────
-
   Widget _buildCompletedSection(
       BuildContext context, DataService dataService, Set<int> completedDays) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Completed Workouts',
           style: TextStyle(
+            color: context.appTextPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -538,9 +524,9 @@ class ReportScreen extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
+              color: context.appCardColor,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Theme.of(context).dividerColor),
+              border: Border.all(color: context.appDivider),
             ),
             child: Column(
               children: [
@@ -570,9 +556,9 @@ class ReportScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
+                  color: context.appCardColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).dividerColor),
+                  border: Border.all(color: context.appDivider),
                 ),
                 child: Row(
                   children: [
@@ -595,7 +581,8 @@ class ReportScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Day $day',
-                            style: const TextStyle(
+                            style: TextStyle(
+                              color: context.appTextPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),

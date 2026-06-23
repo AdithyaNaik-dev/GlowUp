@@ -20,6 +20,7 @@ class _AuthScreenState extends State<AuthScreen>
   bool _obscurePassword = true;
 
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -42,6 +43,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _animController.dispose();
@@ -65,6 +67,9 @@ class _AuthScreenState extends State<AuthScreen>
           _emailController.text,
           _passwordController.text,
         );
+        if (_nameController.text.trim().isNotEmpty) {
+          await DataService().setUserName(_nameController.text.trim());
+        }
       } else {
         await AuthService().signInWithEmail(
           _emailController.text,
@@ -87,6 +92,10 @@ class _AuthScreenState extends State<AuthScreen>
     try {
       final result = await AuthService().signInWithGoogle();
       if (result != null) {
+        final googleName = result.user?.displayName ?? '';
+        if (googleName.isNotEmpty && DataService().userName.isEmpty) {
+          await DataService().setUserName(googleName);
+        }
         await DataService().setAuthComplete();
         if (mounted) _navigateNext();
       }
@@ -240,7 +249,22 @@ class _AuthScreenState extends State<AuthScreen>
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Email field
+                      if (_isSignUp) ...[
+                        _buildTextField(
+                          controller: _nameController,
+                          label: 'Name',
+                          hint: 'Your name',
+                          icon: Icons.person_outline_rounded,
+                          textCapitalization: TextCapitalization.words,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       _buildTextField(
                         controller: _emailController,
                         label: 'Email',
@@ -422,12 +446,14 @@ class _AuthScreenState extends State<AuthScreen>
     bool obscure = false,
     Widget? suffixIcon,
     TextInputType keyboardType = TextInputType.text,
+    TextCapitalization textCapitalization = TextCapitalization.none,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
       validator: validator,
       style: const TextStyle(
         fontSize: 16,

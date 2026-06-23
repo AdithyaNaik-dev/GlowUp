@@ -13,14 +13,13 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 1; // Home is default (middle)
+  int _currentIndex = 1;
 
   final List<Widget> _screens = const [
     ReportScreen(),
     HomeScreen(),
     SettingsScreen(),
   ];
-
 
   @override
   Widget build(BuildContext context) {
@@ -33,48 +32,97 @@ class _MainShellState extends State<MainShell> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).dividerColor,
-                  width: 0.5,
-                ),
-              ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 10,
+              bottom: MediaQuery.of(context).padding.bottom + 10,
             ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              selectedItemColor: AppColors.primary,
-              unselectedItemColor: context.appTextHint,
-              selectedFontSize: 12,
-              unselectedFontSize: 12,
-              elevation: 0,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.bar_chart_rounded),
-                  activeIcon: Icon(Icons.bar_chart_rounded),
+            decoration: BoxDecoration(
+              color: context.appCardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(15),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.bar_chart_rounded,
                   label: 'Report',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_rounded),
-                  activeIcon: Icon(Icons.home_rounded),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.home_rounded,
                   label: 'Home',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.settings_rounded),
-                  activeIcon: Icon(Icons.settings_rounded),
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.settings_rounded,
                   label: 'Settings',
                 ),
               ],
             ),
           ),
-          // Banner ad sits below the nav bar on all tabs
           const BannerAdWidget(),
         ],
       ),
     );
   }
-}
 
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isActive = _currentIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isActive)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: Colors.white, size: 24),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Icon(icon, color: context.appTextHint, size: 24),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? AppColors.primary : context.appTextHint,
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
