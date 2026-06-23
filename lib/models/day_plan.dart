@@ -26,11 +26,11 @@ class DayPlan {
   String get phaseLabel {
     switch (phase) {
       case 'light':
-        return 'Light Routine';
+        return 'Foundation';
       case 'medium':
-        return 'Medium Routine';
+        return 'Build';
       case 'advanced':
-        return 'Advanced Routine';
+        return 'Peak';
       default:
         return phase;
     }

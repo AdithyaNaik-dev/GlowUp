@@ -1,8 +1,8 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-/// Centralized ad service — uses Google test ad unit IDs.
-/// Replace these IDs with production IDs before releasing to Play Store.
+/// Centralized ad service — handles test vs production Ad units.
 class AdService {
   static final AdService _instance = AdService._internal();
   factory AdService() => _instance;
@@ -10,12 +10,14 @@ class AdService {
 
   bool _isInitialized = false;
 
-  // ── Test Ad Unit IDs (Android) ──
-  // Replace with your production IDs before release.
-  static const String bannerAdUnitId =
-      'ca-app-pub-3940256099942544/6300978111';
-  static const String interstitialAdUnitId =
-      'ca-app-pub-3940256099942544/1033173712';
+  // ── Ad Unit IDs (Android) ──
+  static const String bannerAdUnitId = kReleaseMode
+      ? 'ca-app-pub-6301276555526521/3179220301'
+      : 'ca-app-pub-3940256099942544/6300978111';
+
+  static const String interstitialAdUnitId = kReleaseMode
+      ? 'ca-app-pub-6301276555526521/1099283655'
+      : 'ca-app-pub-3940256099942544/1033173712';
 
   InterstitialAd? _interstitialAd;
   bool _isInterstitialLoading = false;

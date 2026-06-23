@@ -12,8 +12,8 @@ class ReportScreen extends StatelessWidget {
     final currentStreak = dataService.currentStreak;
     final bestStreak = dataService.bestStreak;
     final progress = dataService.progressPercent;
-    final totalExercises = completedDays.length * 6;
-    final totalMinutes = completedDays.length * 18;
+    final totalExercises = completedDays.length * 10;
+    final totalMinutes = completedDays.length * 30;
 
     return Scaffold(
       body: SafeArea(
@@ -604,7 +604,7 @@ class ReportScreen extends StatelessWidget {
                           Text(
                             plan != null
                                 ? '${plan.totalExercises} exercises • ${plan.phaseLabel}'
-                                : '6 exercises',
+                                : '10 exercises',
                             style: TextStyle(
                               color: context.appTextHint,
                               fontSize: 13,

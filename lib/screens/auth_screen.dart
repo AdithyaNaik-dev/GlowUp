@@ -155,7 +155,7 @@ class _AuthScreenState extends State<AuthScreen>
         child: FadeTransition(
           opacity: _fadeAnim,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
+            padding: EdgeInsets.fromLTRB(28, 0, 28, MediaQuery.of(context).viewPadding.bottom + 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -502,6 +502,8 @@ class _GoogleSignInButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          minimumSize: const Size.fromHeight(56),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           elevation: 0,
         ),
         child: Row(
@@ -509,8 +511,8 @@ class _GoogleSignInButton extends StatelessWidget {
           children: [
             // Google "G" icon using a custom painter
             SizedBox(
-              width: 22,
-              height: 22,
+              width: 24,
+              height: 24,
               child: CustomPaint(painter: _GoogleLogoPainter()),
             ),
             const SizedBox(width: 14),

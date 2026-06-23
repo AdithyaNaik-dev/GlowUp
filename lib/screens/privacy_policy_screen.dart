@@ -4,8 +4,8 @@ import '../config/theme.dart';
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  static const _effectiveDate = 'March 1, 2026';
-  static const _contactEmail = 'support@glowupapp.com';
+  static const _effectiveDate = 'May 3, 2026';
+  static const _contactEmail = 'adithya2005an@gmail.com';
 
   @override
   Widget build(BuildContext context) {
@@ -39,65 +39,59 @@ class PrivacyPolicyScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           _body(context, '''
-GlowUp ("we", "our", or "us") operates the GlowUp mobile application (the "App"). This Privacy Policy informs you of our policies regarding the collection, use, and disclosure of personal information when you use our App.
-
-By using the App, you agree to the collection and use of information in accordance with this policy.'''),
+This Privacy Policy explains how GlowUp ("we", "us", or "our") collects, uses, and protects your information when you use our mobile application.'''),
 
           _heading(context, '1. Information We Collect'),
           _body(context, '''
-a) Personal Data
-We do not collect any personally identifiable information (PII) such as your name, email address, phone number, or physical address.
+We may collect the following information:
 
-b) Usage Data
-GlowUp stores your workout progress, streak data, fitness level preference, and app settings (such as theme preference) locally on your device using SharedPreferences. This data never leaves your device.
-
-c) Device Information
-We do not collect device identifiers, IP addresses, browser type, or any other device-specific information.'''),
+• Account Information: Email, display name, and profile photo when you sign in via Google or Email.
+• Usage & Progress Data: Workout progress, streaks, points, and activity logs.
+• Device/App Data: Basic device and app information for performance and analytics via Firebase and ads SDKs.'''),
 
           _heading(context, '2. How We Use Your Information'),
           _body(context, '''
-The locally stored data is used solely to:
-• Track your 30-day workout challenge progress
-• Display your current and best streaks
-• Remember your theme and personalization preferences
-• Resume your challenge from where you left off
+We use your data to:
 
-We do not use your data for advertising, profiling, or any purpose other than providing the core functionality of the App.'''),
+• Authenticate users and sync progress
+• Maintain leaderboard and app features
+• Improve app performance and stability
+• Serve advertisements (via Google AdMob)'''),
 
-          _heading(context, '3. Data Storage and Security'),
+          _heading(context, '3. Third-Party Services'),
           _body(context, '''
-All your data is stored locally on your device. We do not operate any servers, databases, or cloud infrastructure that stores your personal data. Since your data remains on your device, its security is governed by the security of your device and operating system.
+We use third-party services that may process data:
 
-You can delete all your data at any time by using the "Delete all data" option in the Settings screen of the App.'''),
+• Firebase Authentication
+• Cloud Firestore
+• Google Sign-In
+• Google Mobile Ads (AdMob)
 
-          _heading(context, '4. Third-Party Services'),
+These services operate under their own privacy policies.'''),
+
+          _heading(context, '4. Ads'),
           _body(context, '''
-The App does not integrate any third-party analytics, advertising, or tracking services. We do not share, sell, or transfer your data to any third parties.
+GlowUp uses Google AdMob to display ads. AdMob may use device identifiers and usage data to serve personalized or non-personalized ads.'''),
 
-The App may include links to external services (such as the Google Play Store for rating or an email client for feedback). These external services have their own privacy policies, and we encourage you to review them.'''),
-
-          _heading(context, '5. Children\'s Privacy'),
+          _heading(context, '5. Data Retention'),
           _body(context, '''
-GlowUp is suitable for users of all ages. We do not knowingly collect personal information from anyone, including children under 13. Since all data is stored locally and no personal information is transmitted, the App complies with the Children's Online Privacy Protection Act (COPPA) and similar regulations.'''),
+We retain your data as long as your account is active or as needed to provide services. You may request deletion of your data at any time.'''),
 
-          _heading(context, '6. Permissions'),
+          _heading(context, '6. User Rights & Data Deletion'),
           _body(context, '''
-The App may request the following permissions:
-• Internet access — Required for the "Share App" and "Rate Us" features to open external links. The App does not transmit any user data over the internet.
-• No other sensitive permissions are required.'''),
+You can request to delete your account and all associated data by contacting us at: adithya2005an@gmail.com'''),
 
-          _heading(context, '7. Data Retention'),
+          _heading(context, '7. Children\'s Privacy'),
           _body(context, '''
-Your data is retained locally on your device for as long as the App is installed. Uninstalling the App or using the "Delete all data" option will permanently remove all stored data. We do not retain any copies of your data.'''),
+GlowUp is not intended for children under the age of 13. We do not knowingly collect personal data from children.'''),
 
-          _heading(context, '8. Your Rights'),
+          _heading(context, '8. No Sale of Personal Data'),
           _body(context, '''
-You have the right to:
-• Access your data — All data is visible within the App (progress, streaks, settings).
-• Delete your data — Use the "Delete all data" option in Settings to erase all stored data at any time.
-• Opt out — Since we do not collect or transmit data, there is nothing to opt out of.'''),
+We do not sell your personal information.'''),
 
-          _heading(context, '9. Changes to This Privacy Policy'),
+          _heading(context, '9. Contact Us'),
+          _body(context, '''
+For any questions: adithya2005an@gmail.com'''),
           _body(context, '''
 We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy within the App and updating the "Effective date" at the top. You are advised to review this Privacy Policy periodically for any changes.'''),
 

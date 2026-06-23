@@ -7,12 +7,12 @@ enum ExerciseMode { aiTracked, timerBased, manual }
 
 ExerciseMode getExerciseMode(String name) {
   final n = name.toLowerCase();
-  // Timer-based: hold exercises or exercises camera can't track well
-  if (n == 'plank' || n == 'wall sit' || n.contains('mewing') ||
-      n.contains('tongue suction')) {
+  if (n == 'plank' || n == 'wall sit' || n == 'dynamic plank' ||
+      n.contains('mewing') || n.contains('tongue suction') ||
+      n == 'neck extensions' || n == 'neck lift' || n == 'jaw clench hold' ||
+      n == 'star crunch' || n == 'tuck crunches' || n == 'rear lunges') {
     return ExerciseMode.timerBased;
   }
-  // All others are AI tracked (front-camera optimized)
   return ExerciseMode.aiTracked;
 }
 
@@ -22,7 +22,8 @@ bool isFaceExercise(String name) {
       n.contains('eyebrow') || n.contains('lip') || n.contains('wink') ||
       n.contains('jaw') || n.contains('chin') || n.contains('fish') ||
       n.contains('tongue') || n.contains('cheek') || n.contains('eye') ||
-      n.contains('neck') || n.contains('mewing');
+      n.contains('neck') || n.contains('mewing') || n.contains('nose') ||
+      n.contains('surprised') || n == 'o face';
 }
 
 class TrackingSnapshot {
@@ -52,7 +53,7 @@ class _SmoothedValue {
   double _value = 0;
   bool _initialized = false;
 
-  double update(double raw, {double alpha = 0.3}) {
+  double update(double raw, {double alpha = 0.4}) {
     if (!_initialized) {
       _value = raw;
       _initialized = true;
@@ -81,21 +82,18 @@ class ExerciseRepCounter {
   String? guidanceHint;
 
   DateTime? _lastTimestamp;
-  DateTime? _lastRepTime;      // cooldown tracking
+  DateTime? _lastRepTime;
   bool _leftSideTriggered = false;
   bool _rightSideTriggered = false;
   int _missingFrames = 0;
   int _framesSinceStart = 0;
 
-  // Smoothing for key metrics
   final Map<String, _SmoothedValue> _smoothed = {};
 
-  // Calibration: baseline captured in first 3 seconds
   bool _calibrated = false;
   final Map<String, double> _baseline = {};
   DateTime? _exerciseStartTime;
 
-  // Last valid landmarks for frame buffer (hold for 5 frames)
   List<LandmarkPoint>? _lastValidFace;
   List<LandmarkPoint>? _lastValidPose;
   int _faceHoldFrames = 0;
@@ -154,11 +152,11 @@ class ExerciseRepCounter {
 
     final normalized = exerciseName.toLowerCase();
 
-    // ── Frame buffer: hold last valid landmarks for 5 frames ──
+    // ── Frame buffer: hold last valid landmarks for 8 frames ──
     if (faceLandmarks.isNotEmpty) {
       _lastValidFace = faceLandmarks;
       _faceHoldFrames = 0;
-    } else if (_lastValidFace != null && _faceHoldFrames < 5) {
+    } else if (_lastValidFace != null && _faceHoldFrames < 8) {
       faceLandmarks = _lastValidFace!;
       _faceHoldFrames++;
     }
@@ -166,7 +164,7 @@ class ExerciseRepCounter {
     if (poseLandmarks.isNotEmpty) {
       _lastValidPose = poseLandmarks;
       _poseHoldFrames = 0;
-    } else if (_lastValidPose != null && _poseHoldFrames < 5) {
+    } else if (_lastValidPose != null && _poseHoldFrames < 8) {
       poseLandmarks = _lastValidPose!;
       _poseHoldFrames++;
     }
@@ -201,7 +199,7 @@ class ExerciseRepCounter {
 
     if (landmarks.isEmpty) {
       _missingFrames++;
-      if (_missingFrames > 15) {
+      if (_missingFrames > 20) {
         statusText = 'Face not visible';
         guidanceHint = 'Position your face in the camera';
       } else {
@@ -220,14 +218,12 @@ class ExerciseRepCounter {
       return _dist(p1.x, p1.y, p2.x, p2.y);
     }
 
-    // Calibration: first 3 seconds, capture baselines
     final elapsed = _exerciseStartTime != null
         ? DateTime.now().difference(_exerciseStartTime!).inMilliseconds
         : 0;
     final inCalibration = elapsed < 3000;
 
     switch (exercise) {
-      // 1. Jaw Open-Close / Mouth Open
       case 'jaw open-close':
       case 'jaw open close':
       case 'mouth open':
@@ -242,12 +238,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['mouth'] ?? 0.015;
-        final open = v > base + 0.012;
-        final close = v < base + 0.005;
+        final open = v > base + 0.007;
+        final close = v < base + 0.003;
         _countWithStateMachine(active: open, reset: close);
         break;
 
-      // 2. Smile
       case 'smile':
         final raw = dist(61, 291);
         if (raw == null) return;
@@ -260,12 +255,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['smile'] ?? 0.25;
-        final wide = v > base + 0.03;
-        final neutral = v < base + 0.01;
+        final wide = v > base + 0.015;
+        final neutral = v < base + 0.006;
         _countWithStateMachine(active: wide, reset: neutral);
         break;
 
-      // 3. Blink (EAR — Eye Aspect Ratio)
       case 'blink':
         final leftH = dist(159, 145);
         final rightH = dist(386, 374);
@@ -280,12 +274,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['blink'] ?? 0.025;
-        final closed = v < base * 0.5;
-        final open = v > base * 0.7;
+        final closed = v < base * 0.65;
+        final open = v > base * 0.75;
         _countWithStateMachine(active: closed, reset: open);
         break;
 
-      // 4. Eyebrow Raise
       case 'eyebrow raise':
         final leftBrow = byId[70];
         final leftEye = byId[159];
@@ -303,12 +296,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['eyebrow'] ?? 0.04;
-        final raised = v > base + 0.008;
-        final neutral = v < base + 0.003;
+        final raised = v > base + 0.004;
+        final neutral = v < base + 0.002;
         _countWithStateMachine(active: raised, reset: neutral);
         break;
 
-      // 5. Lip Pucker
       case 'lip pucker':
         final raw = dist(61, 291);
         if (raw == null) return;
@@ -321,12 +313,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['pucker'] ?? 0.25;
-        final puckered = v < base - 0.025;
-        final neutral = v > base - 0.01;
+        final puckered = v < base - 0.012;
+        final neutral = v > base - 0.005;
         _countWithStateMachine(active: puckered, reset: neutral);
         break;
 
-      // 6. Left Wink
       case 'left wink':
         final leftH = dist(159, 145);
         final rightH = dist(386, 374);
@@ -341,12 +332,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['lwink'] ?? 0.025;
-        final leftClosed = lv < base * 0.5 && rv > base * 0.6;
-        final open = lv > base * 0.7;
+        final leftClosed = lv < base * 0.65 && rv > base * 0.45;
+        final open = lv > base * 0.75;
         _countWithStateMachine(active: leftClosed, reset: open);
         break;
 
-      // 7. Right Wink
       case 'right wink':
         final leftH = dist(159, 145);
         final rightH = dist(386, 374);
@@ -361,12 +351,11 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['rwink'] ?? 0.025;
-        final rightClosed = rv < base * 0.5 && lv > base * 0.6;
-        final open = rv > base * 0.7;
+        final rightClosed = rv < base * 0.65 && lv > base * 0.45;
+        final open = rv > base * 0.75;
         _countWithStateMachine(active: rightClosed, reset: open);
         break;
 
-      // 8. Jaw Shift
       case 'jaw shift':
         final chin = byId[152];
         final nose = byId[1];
@@ -381,28 +370,43 @@ class ExerciseRepCounter {
         }
 
         final base = _baseline['jawshift'] ?? 0;
-        final shifted = (v - base).abs() > 0.015;
-        final centered = (v - base).abs() < 0.008;
+        final shifted = (v - base).abs() > 0.009;
+        final centered = (v - base).abs() < 0.005;
         _countWithStateMachine(active: shifted, reset: centered);
         break;
 
-      // ── Legacy face exercises (kept for backward compatibility) ──
       case 'chin lift':
       case 'neck raise':
         final raw = dist(152, 1);
         if (raw == null) return;
         final v = _getSmoothed('chinlift', raw);
-        final up = v > 0.16;
-        final neutral = v < 0.17;
-        _countWithStateMachine(active: up, reset: neutral);
+
+        if (inCalibration) {
+          _baseline['chinlift'] = v;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseChin = _baseline['chinlift'] ?? 0.15;
+        final up = v > baseChin + 0.008;
+        final neutralChin = v < baseChin + 0.003;
+        _countWithStateMachine(active: up, reset: neutralChin);
         break;
 
       case 'fish face':
         final raw = dist(234, 454);
         if (raw == null) return;
         final v = _getSmoothed('fishface', raw);
-        final contracted = v < 0.32;
-        final released = v > 0.32;
+
+        if (inCalibration) {
+          _baseline['fishface'] = v;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseFish = _baseline['fishface'] ?? 0.35;
+        final contracted = v < baseFish - 0.012;
+        final released = v > baseFish - 0.005;
         _countWithStateMachine(active: contracted, reset: released);
         break;
 
@@ -410,9 +414,9 @@ class ExerciseRepCounter {
         final raw = dist(13, 14);
         if (raw == null) return;
         final v = _getSmoothed('jawres', raw);
-        final open = v > 0.03;
-        final close = v < 0.022;
-        _countWithStateMachine(active: open, reset: close);
+        final openJaw = v > 0.025;
+        final closeJaw = v < 0.018;
+        _countWithStateMachine(active: openJaw, reset: closeJaw);
         break;
 
       case 'cheek lift':
@@ -421,10 +425,20 @@ class ExerciseRepCounter {
         final leftEye = byId[159];
         final rightEye = byId[386];
         if (leftCheek == null || rightCheek == null || leftEye == null || rightEye == null) return;
-        final leftLift = leftCheek.y < leftEye.y + 0.10;
-        final rightLift = rightCheek.y < rightEye.y + 0.10;
-        final relax = leftCheek.y > leftEye.y + 0.11 && rightCheek.y > rightEye.y + 0.11;
-        _countWithStateMachine(active: leftLift && rightLift, reset: relax);
+
+        final rawCheek = ((leftEye.y - leftCheek.y) + (rightEye.y - rightCheek.y)) / 2;
+        final vCheek = _getSmoothed('cheeklift', rawCheek);
+
+        if (inCalibration) {
+          _baseline['cheeklift'] = vCheek;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseCheek = _baseline['cheeklift'] ?? 0.10;
+        final lifted = vCheek < baseCheek - 0.004;
+        final relaxCheek = vCheek > baseCheek - 0.002;
+        _countWithStateMachine(active: lifted, reset: relaxCheek);
         break;
 
       case 'eye widening':
@@ -432,8 +446,16 @@ class ExerciseRepCounter {
         final rightEyeOpen = dist(386, 374);
         if (leftEyeOpen == null || rightEyeOpen == null) return;
         final avg = _getSmoothed('eyewiden', (leftEyeOpen + rightEyeOpen) / 2);
-        final widen = avg > 0.025;
-        final normal = avg < 0.025;
+
+        if (inCalibration) {
+          _baseline['eyewiden'] = avg;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseEye = _baseline['eyewiden'] ?? 0.022;
+        final widen = avg > baseEye + 0.004;
+        final normal = avg < baseEye + 0.002;
         _countWithStateMachine(active: widen, reset: normal);
         break;
 
@@ -443,9 +465,126 @@ class ExerciseRepCounter {
         final raw = dist(13, 14);
         if (raw == null) return;
         final v = _getSmoothed('mewing', raw);
-        final good = v < 0.025;
+        final good = v < 0.028;
         statusText = good ? 'Good form' : 'Close your mouth';
         _updateHoldTracking(exercise, dt, good);
+        break;
+
+      case 'neck extensions':
+      case 'neck lift':
+      case 'jaw clench hold':
+        statusText = 'Hold position';
+        _updateHoldTracking(exercise, dt, true);
+        break;
+
+      case 'surprised face':
+        final eyebrowLeft = byId[70];
+        final eyeLeftTop = byId[159];
+        final eyebrowRight = byId[300];
+        final eyeRightTop = byId[386];
+        final rawMouth = dist(13, 14);
+
+        if (eyebrowLeft == null || eyeLeftTop == null || eyebrowRight == null || eyeRightTop == null || rawMouth == null) return;
+
+        final rawBrow = ((eyebrowLeft.y - eyeLeftTop.y).abs() + (eyebrowRight.y - eyeRightTop.y).abs()) / 2;
+        final vBrow = _getSmoothed('surprised_brow', rawBrow);
+        final vMouth = _getSmoothed('surprised_mouth', rawMouth);
+
+        if (inCalibration) {
+          _baseline['surprised_brow'] = vBrow;
+          _baseline['surprised_mouth'] = vMouth;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseBrow = _baseline['surprised_brow'] ?? 0.04;
+        final baseMouth = _baseline['surprised_mouth'] ?? 0.015;
+        final browsRaised = vBrow > baseBrow + 0.002;
+        final mouthOpen = vMouth > baseMouth + 0.004;
+        final active = browsRaised && mouthOpen;
+        final reset = vBrow < baseBrow + 0.001 && vMouth < baseMouth + 0.002;
+        _countWithStateMachine(active: active, reset: reset);
+        break;
+
+      case 'cheek puff':
+        final cheekL = byId[50];
+        final cheekR = byId[280];
+        final noseCenter = byId[1];
+        final rawMouth2 = dist(13, 14);
+
+        if (cheekL == null || cheekR == null || noseCenter == null || rawMouth2 == null) return;
+
+        final cheekWidth = _getSmoothed('cheek_puff_width', _dist(cheekL.x, cheekL.y, cheekR.x, cheekR.y));
+        final mouthClosed = _getSmoothed('cheek_puff_mouth', rawMouth2);
+
+        if (inCalibration) {
+          _baseline['cheek_puff'] = cheekWidth;
+          _baseline['cheek_puff_mouth'] = mouthClosed;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final basePuff = _baseline['cheek_puff'] ?? 0.35;
+        final baseMouthClose = _baseline['cheek_puff_mouth'] ?? 0.015;
+        final puffed = cheekWidth > basePuff + 0.008;
+        final released = cheekWidth < basePuff + 0.003;
+        final closed = mouthClosed < baseMouthClose + 0.008;
+        _countWithStateMachine(active: puffed && closed, reset: released);
+        break;
+
+      case 'o face':
+        final rawMouthW = dist(61, 291);
+        final rawMouthV = dist(13, 14);
+
+        if (rawMouthW == null || rawMouthV == null) return;
+
+        final vWidth = _getSmoothed('oface_width', rawMouthW);
+        final vHeight = _getSmoothed('oface_height', rawMouthV);
+
+        if (inCalibration) {
+          _baseline['oface_width'] = vWidth;
+          _baseline['oface_height'] = vHeight;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseWidth = _baseline['oface_width'] ?? 0.25;
+        final baseHeight = _baseline['oface_height'] ?? 0.015;
+        final narrowed = vWidth < baseWidth - 0.005;
+        final open = vHeight > baseHeight + 0.004;
+        final released = vWidth > baseWidth - 0.002;
+        _countWithStateMachine(active: narrowed && open, reset: released);
+        break;
+
+      case 'nose scrunch':
+        final noseBridge = byId[6];
+        final noseTip = byId[1];
+        final noseWingL = byId[48];
+        final noseWingR = byId[278];
+
+        if (noseBridge == null || noseTip == null || noseWingL == null || noseWingR == null) return;
+
+        final rawBridgeToTip = dist(6, 1);
+        final rawWingSpread = _dist(noseWingL.x, noseWingL.y, noseWingR.x, noseWingR.y);
+
+        if (rawBridgeToTip == null) return;
+
+        final vBridge = _getSmoothed('nose_scrunch_bridge', rawBridgeToTip);
+        final vWings = _getSmoothed('nose_scrunch_wings', rawWingSpread);
+
+        if (inCalibration) {
+          _baseline['nose_scrunch'] = vBridge;
+          _baseline['nose_wings'] = vWings;
+          statusText = 'Calibrating...';
+          return;
+        }
+
+        final baseBridgeDist = _baseline['nose_scrunch'] ?? 0.15;
+        final baseWingDist = _baseline['nose_wings'] ?? 0.06;
+        final scrunched = vBridge < baseBridgeDist - 0.004;
+        final wingsNarrowed = vWings < baseWingDist - 0.003;
+        final released = vBridge > baseBridgeDist - 0.002;
+        _countWithStateMachine(active: scrunched || wingsNarrowed, reset: released);
         break;
 
       default:
@@ -465,7 +604,7 @@ class ExerciseRepCounter {
 
     if (landmarks.isEmpty) {
       _missingFrames++;
-      if (_missingFrames > 15) {
+      if (_missingFrames > 20) {
         statusText = 'Body not visible';
         guidanceHint = 'Step back so your full body is visible';
       } else {
@@ -474,11 +613,10 @@ class ExerciseRepCounter {
       return;
     }
 
-    // Visibility filter: only use landmarks with visibility >= 0.5
-    final visible = landmarks.where((l) => l.visibility >= 0.5).toList();
+    final visible = landmarks.where((l) => l.visibility >= 0.3).toList();
     final visibleRatio = visible.length / landmarks.length;
 
-    if (visibleRatio < 0.4) {
+    if (visibleRatio < 0.3) {
       _missingFrames++;
       statusText = 'Move into frame';
       guidanceHint = 'Step back — full body not visible';
@@ -488,7 +626,6 @@ class ExerciseRepCounter {
 
     final byId = {for (final point in visible) point.id: point};
 
-    // Camera guidance
     final hasUpperBody = byId.containsKey(11) && byId.containsKey(12);
     final hasLowerBody = byId.containsKey(27) || byId.containsKey(28);
 
@@ -499,7 +636,6 @@ class ExerciseRepCounter {
     }
 
     switch (exercise) {
-      // 1. Jumping Jacks (arms primary, legs optional)
       case 'jumping jacks':
         final leftWrist = byId[15];
         final rightWrist = byId[16];
@@ -511,16 +647,14 @@ class ExerciseRepCounter {
           return;
         }
 
-        // Arms up = wrists above shoulders
-        final armsUp = leftWrist.y < leftShoulder.y && rightWrist.y < rightShoulder.y;
-        final armsDown = leftWrist.y > leftShoulder.y + 0.08 && rightWrist.y > rightShoulder.y + 0.08;
+        // Either arm above shoulder counts
+        final armsUp = leftWrist.y < leftShoulder.y + 0.02 || rightWrist.y < rightShoulder.y + 0.02;
+        final armsDown = leftWrist.y > leftShoulder.y + 0.05 && rightWrist.y > rightShoulder.y + 0.05;
 
         _countWithStateMachine(active: armsUp, reset: armsDown);
         break;
 
-      // 2. Squats (knee angle OR hip drop)
       case 'squats':
-        // Try knee angle first
         final leftKnee = _safeAngle(byId, 23, 25, 27);
         final rightKnee = _safeAngle(byId, 24, 26, 28);
 
@@ -530,11 +664,10 @@ class ExerciseRepCounter {
                   ? (leftKnee + rightKnee) / 2
                   : (leftKnee ?? rightKnee!));
 
-          final down = knee < 135;   // Very lenient
-          final up = knee > 150;
+          final down = knee < 150;
+          final up = knee > 160;
           _countWithStateMachine(active: down, reset: up, peakHint: 'Go lower');
         } else {
-          // Fallback: hip drop relative to baseline
           final hip = byId[23] ?? byId[24];
           if (hip != null) {
             final v = _getSmoothed('squat_hip', hip.y);
@@ -543,23 +676,21 @@ class ExerciseRepCounter {
               _calibrated = true;
             }
             final base = _baseline['squat_hip'] ?? v;
-            final dropped = v > base + 0.05;
-            final risen = v < base + 0.02;
+            final dropped = v > base + 0.03;
+            final risen = v < base + 0.012;
             _countWithStateMachine(active: dropped, reset: risen, peakHint: 'Go lower');
           }
         }
         break;
 
-      // 3. High Knees (alternate legs)
       case 'high knees':
         final leftKnee = byId[25];
         final rightKnee = byId[26];
         final leftHip = byId[23];
         final rightHip = byId[24];
 
-        // Left knee check
         if (leftKnee != null && leftHip != null) {
-          final leftUp = leftKnee.y < leftHip.y + 0.02; // lenient
+          final leftUp = leftKnee.y < leftHip.y + 0.06;
           if (leftUp && !_leftSideTriggered) {
             if (_canCountRep()) {
               repCount++;
@@ -571,9 +702,8 @@ class ExerciseRepCounter {
           if (!leftUp) _leftSideTriggered = false;
         }
 
-        // Right knee check
         if (rightKnee != null && rightHip != null) {
-          final rightUp = rightKnee.y < rightHip.y + 0.02;
+          final rightUp = rightKnee.y < rightHip.y + 0.06;
           if (rightUp && !_rightSideTriggered) {
             if (_canCountRep()) {
               repCount++;
@@ -590,7 +720,6 @@ class ExerciseRepCounter {
         }
         break;
 
-      // 4. Arm Raises (Front Raise) — wrist above shoulder
       case 'arm raises':
       case 'front raise':
         final leftWrist = byId[15];
@@ -600,16 +729,14 @@ class ExerciseRepCounter {
 
         if (leftWrist == null || rightWrist == null || leftShoulder == null || rightShoulder == null) return;
 
-        final armsUp = leftWrist.y < leftShoulder.y - 0.02 && rightWrist.y < rightShoulder.y - 0.02;
-        final armsDown = leftWrist.y > leftShoulder.y + 0.1 && rightWrist.y > rightShoulder.y + 0.1;
+        final armsUp = leftWrist.y < leftShoulder.y + 0.02 && rightWrist.y < rightShoulder.y + 0.02;
+        final armsDown = leftWrist.y > leftShoulder.y + 0.06 && rightWrist.y > rightShoulder.y + 0.06;
 
         _countWithStateMachine(active: armsUp, reset: armsDown, peakHint: 'Raise higher');
         break;
 
-      // 5. Push-ups (front-view adapted: shoulder/head Y movement)
       case 'pushups':
       case 'push-ups':
-        // Front-view: track shoulder Y position (goes down and comes up)
         final shoulder = byId[11] ?? byId[12];
         if (shoulder != null) {
           final v = _getSmoothed('pushup_y', shoulder.y);
@@ -622,24 +749,22 @@ class ExerciseRepCounter {
           }
 
           final base = _baseline['pushup_y'] ?? v;
-          final down = v > base + 0.04;
-          final up = v < base + 0.015;
+          final down = v > base + 0.025;
+          final up = v < base + 0.01;
           _countWithStateMachine(active: down, reset: up, peakHint: 'Go lower');
         } else {
-          // Fallback to elbow angle if visible
           final left = _safeAngle(byId, 11, 13, 15);
           final right = _safeAngle(byId, 12, 14, 16);
           if (left != null || right != null) {
             final elbow = _getSmoothed('pushup_elbow',
                 left != null && right != null ? (left + right) / 2 : (left ?? right!));
-            final down = elbow < 120;
-            final up = elbow > 145;
+            final down = elbow < 130;
+            final up = elbow > 150;
             _countWithStateMachine(active: down, reset: up, peakHint: 'Go lower');
           }
         }
         break;
 
-      // 6. Standing Knee Raises (replaces Mountain Climbers)
       case 'standing knee raises':
       case 'mountain climbers':
         final leftKnee = byId[25];
@@ -648,13 +773,13 @@ class ExerciseRepCounter {
         final rightHip = byId[24];
 
         if (leftKnee != null && leftHip != null) {
-          final leftUp = leftKnee.y < leftHip.y;
+          final leftUp = leftKnee.y < leftHip.y + 0.04;
           if (leftUp && !_leftSideTriggered) _leftSideTriggered = true;
           if (!leftUp) _leftSideTriggered = false;
         }
 
         if (rightKnee != null && rightHip != null) {
-          final rightUp = rightKnee.y < rightHip.y;
+          final rightUp = rightKnee.y < rightHip.y + 0.04;
           if (rightUp && !_rightSideTriggered) _rightSideTriggered = true;
           if (!rightUp) _rightSideTriggered = false;
         }
@@ -672,7 +797,6 @@ class ExerciseRepCounter {
         }
         break;
 
-      // 7. Side Steps (leg distance wide vs close)
       case 'side steps':
         final leftAnkle = byId[27];
         final rightAnkle = byId[28];
@@ -684,12 +808,11 @@ class ExerciseRepCounter {
         final legSpread = _getSmoothed('sidestep', _dist(leftAnkle.x, leftAnkle.y, rightAnkle.x, rightAnkle.y));
         final hipW = _dist(leftHip.x, leftHip.y, rightHip.x, rightHip.y);
 
-        final wide = legSpread > hipW * 2.0;
-        final closed = legSpread < hipW * 1.3;
+        final wide = legSpread > hipW * 1.6;
+        final closed = legSpread < hipW * 1.2;
         _countWithStateMachine(active: wide, reset: closed);
         break;
 
-      // 8. Burpees (front-view adapted: track shoulder Y)
       case 'burpees':
         final shoulder = byId[11] ?? byId[12];
         if (shoulder != null) {
@@ -699,19 +822,17 @@ class ExerciseRepCounter {
             _calibrated = true;
           }
           final base = _baseline['burpee_y'] ?? v;
-          final down = v > base + 0.08;
-          final up = v < base + 0.02;
+          final down = v > base + 0.05;
+          final up = v < base + 0.015;
           _countWithStateMachine(active: down, reset: up);
         }
         break;
 
-      // Hold exercises
       case 'plank':
       case 'wall sit':
         final shoulder = byId[11];
         final hip = byId[23];
         if (shoulder != null && hip != null) {
-          // Simple: is the body relatively straight/in position?
           final good = exercise == 'plank'
               ? _isPlankOk(byId)
               : _isWallSitOk(byId);
@@ -719,8 +840,16 @@ class ExerciseRepCounter {
           _updateHoldTracking(exercise, dt, good);
         } else {
           statusText = 'Hold position';
-          _updateHoldTracking(exercise, dt, true); // Give benefit of doubt
+          _updateHoldTracking(exercise, dt, true);
         }
+        break;
+
+      case 'dynamic plank':
+      case 'star crunch':
+      case 'tuck crunches':
+      case 'rear lunges':
+        statusText = 'Keep going';
+        _updateHoldTracking(exercise, dt, true);
         break;
 
       default:
@@ -758,10 +887,9 @@ class ExerciseRepCounter {
     }
   }
 
-  // 300ms cooldown between reps
   bool _canCountRep() {
     if (_lastRepTime == null) return true;
-    return DateTime.now().difference(_lastRepTime!).inMilliseconds > 300;
+    return DateTime.now().difference(_lastRepTime!).inMilliseconds > 200;
   }
 
   void _updateHoldTracking(String exercise, Duration dt, bool goodForm) {
@@ -772,23 +900,26 @@ class ExerciseRepCounter {
 
   bool _isHold(String exercise) {
     final n = exercise.toLowerCase();
-    return n == 'plank' || n == 'wall sit' || n.contains('mewing') || n.contains('tongue suction');
+    return n == 'plank' || n == 'wall sit' || n == 'dynamic plank' ||
+        n.contains('mewing') || n.contains('tongue suction') ||
+        n == 'neck extensions' || n == 'neck lift' || n == 'jaw clench hold' ||
+        n == 'star crunch' || n == 'tuck crunches' || n == 'rear lunges';
   }
 
   bool _isPlankOk(Map<int, LandmarkPoint> byId) {
     final shoulder = byId[11];
     final hip = byId[23];
     final ankle = byId[27];
-    if (shoulder == null || hip == null) return true; // benefit of doubt
+    if (shoulder == null || hip == null) return true;
     if (ankle == null) return true;
     final angle = _angleFromPoints(shoulder, hip, ankle);
-    return angle > 130; // very lenient
+    return angle > 120;
   }
 
   bool _isWallSitOk(Map<int, LandmarkPoint> byId) {
     final knee = _safeAngle(byId, 23, 25, 27);
-    if (knee == null) return true; // benefit of doubt
-    return knee > 60 && knee < 130; // very lenient
+    if (knee == null) return true;
+    return knee > 50 && knee < 140;
   }
 
   double? _safeAngle(Map<int, LandmarkPoint> byId, int a, int b, int c) {

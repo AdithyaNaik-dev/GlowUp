@@ -15,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
 
   // ── Constants ──
   static const _appVersion = 'Beta 1.0.0';
-  static const _packageName = 'com.glowup.glowup';
+  static const _packageName = 'com.adithya.glowup';
   static const _playStoreUrl =
       'https://play.google.com/store/apps/details?id=$_packageName';
   static const _feedbackEmail = 'support@glowupapp.com';

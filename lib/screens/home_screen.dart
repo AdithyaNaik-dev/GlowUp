@@ -1,12 +1,16 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 import '../widgets/progress_card.dart';
 import '../widgets/streak_card.dart';
 import '../widgets/calendar_view.dart';
 import 'workout_screen.dart';
+import 'auth_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -202,6 +206,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTodayCard(BuildContext context, int currentDay, dayPlan) {
+    final isPostChallenge = _dataService.isInPostChallengeMode;
+    final dayLabel = isPostChallenge ? 'Daily Workout' : 'Day $currentDay of 30';
+    final phaseLabel =
+        isPostChallenge ? 'Personalized for you' : dayPlan?.phaseLabel ?? '';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -253,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          'Day $currentDay of 30',
+                          dayLabel,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
@@ -262,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (dayPlan != null)
+                      if (phaseLabel.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -273,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            dayPlan.phaseLabel,
+                            phaseLabel,
                             style: const TextStyle(
                               color: AppColors.secondary,
                               fontSize: 12,
@@ -296,8 +305,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
                   Text(
                     dayPlan != null
-                        ? '${dayPlan.totalExercises} exercises • ~18 min'
-                        : 'Challenge complete!',
+                        ? '${dayPlan.totalExercises} exercises • ~30 min'
+                        : 'Get your personalized workout',
                     style: TextStyle(
                       color: Colors.white.withAlpha(200),
                       fontSize: 14,
@@ -350,26 +359,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLeaderboard() {
-    // Mock leaderboard data
-    final leaderboard = [
-      {'rank': 1, 'name': 'Alex R.', 'days': 28, 'streak': 28, 'avatar': '🏆'},
-      {'rank': 2, 'name': 'Priya K.', 'days': 25, 'streak': 22, 'avatar': '🥈'},
-      {'rank': 3, 'name': 'Marcus D.', 'days': 24, 'streak': 20, 'avatar': '🥉'},
-      {'rank': 4, 'name': 'Sofia L.', 'days': 21, 'streak': 18, 'avatar': '💪'},
-      {'rank': 5, 'name': 'You', 'days': _dataService.completedDays.length, 'streak': _dataService.currentStreak, 'avatar': '⭐'},
-      {'rank': 6, 'name': 'James T.', 'days': 15, 'streak': 10, 'avatar': '🔥'},
-      {'rank': 7, 'name': 'Aisha M.', 'days': 12, 'streak': 8, 'avatar': '✨'},
-      {'rank': 8, 'name': 'Liam W.', 'days': 10, 'streak': 6, 'avatar': '💫'},
-    ];
+    final user = FirebaseAuth.instance.currentUser;
+    final bool isSignedIn = user != null;
 
-    // Sort by days completed
-    leaderboard.sort((a, b) => (b['days'] as int).compareTo(a['days'] as int));
-    // Re-assign ranks after sort
-    for (int i = 0; i < leaderboard.length; i++) {
-      leaderboard[i]['rank'] = i + 1;
-    }
-
-    return Column(
+    final leaderboardContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -393,47 +386,195 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: context.appDivider),
           ),
-          child: Column(
-            children: [
-              // Top 3 podium
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.secondary.withAlpha(15),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: isSignedIn
+                ? FirebaseFirestore.instance
+                    .collection('users')
+                    .orderBy('points', descending: true)
+                    .limit(50)
+                    .snapshots()
+                : Stream.empty(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Center(
+                    child: Text(
+                      'Leaderboard loading...',
+                      style: TextStyle(color: context.appTextSecondary),
+                    ),
                   ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _podiumItem(leaderboard[1], 60, AppColors.textSecondary),
-                    _podiumItem(leaderboard[0], 80, AppColors.secondary),
-                    _podiumItem(leaderboard[2], 50, AppColors.warning),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // Rest of leaderboard
-              ...leaderboard.skip(3).map((entry) => _leaderboardRow(entry)),
-            ],
+                );
+              }
+
+              final docs = snapshot.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Center(child: Text('No entries yet.', style: TextStyle(color: context.appTextHint))),
+                );
+              }
+
+              final List<Map<String, dynamic>> leaderboard = [];
+              for (int i = 0; i < docs.length; i++) {
+                final data = docs[i].data() as Map<String, dynamic>;
+                String avatar = '⭐';
+                if (i == 0) {
+                  avatar = '🏆';
+                } else if (i == 1) {
+                  avatar = '🥈';
+                } else if (i == 2) {
+                  avatar = '🥉';
+                }
+
+                leaderboard.add({
+                  'rank': i + 1,
+                  'uid': docs[i].id,
+                  'name': data['name'] ?? 'User',
+                  'points': data['points'] ?? 0,
+                  'streak': data['streak'] ?? 0,
+                  'avatar': avatar,
+                });
+              }
+
+              return Column(
+                children: [
+                  if (leaderboard.length >= 3)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.secondary.withAlpha(15),
+                            Colors.transparent,
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _podiumItem(leaderboard[1], 60, AppColors.textSecondary, user?.uid),
+                          _podiumItem(leaderboard[0], 80, AppColors.secondary, user?.uid),
+                          _podiumItem(leaderboard[2], 50, AppColors.warning, user?.uid),
+                        ],
+                      ),
+                    ),
+                  if (leaderboard.length >= 3) const Divider(height: 1),
+                  ...leaderboard.skip(leaderboard.length >= 3 ? 3 : 0).map((entry) => _leaderboardRow(entry, user?.uid)),
+                ],
+              );
+            },
           ),
         ),
       ],
     );
+
+    if (isSignedIn) {
+      return leaderboardContent;
+    } else {
+      return Stack(
+        children: [
+          // Blurred background
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+            child: Opacity(
+              opacity: 0.6,
+              child: IgnorePointer(child: leaderboardContent),
+            ),
+          ),
+          // Overlay card — centered but scrollable to avoid bottom overflow on small screens or when keyboard is present
+          Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, MediaQuery.of(context).viewPadding.bottom + 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: context.appCardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(20),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_rounded, size: 48, color: AppColors.secondary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Sign in to unlock leaderboard',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.appTextPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Compete with friends and track your ranking!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.appTextHint,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const AuthScreen()),
+                          ).then((_) => setState(() {}));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(56),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
   }
 
-  Widget _podiumItem(Map<String, dynamic> entry, double height, Color color) {
-    final isYou = entry['name'] == 'You';
+  Widget _podiumItem(Map<String, dynamic> entry, double height, Color color, String? currentUserId) {
+    final isYou = entry['uid'] == currentUserId;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -443,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 6),
         Text(
-          entry['name'] as String,
+          isYou ? 'You' : entry['name'] as String,
           style: TextStyle(
             color: isYou ? AppColors.secondary : context.appTextPrimary,
             fontSize: 13,
@@ -478,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Text(
-                '${entry['days']}d',
+                '${entry['points']} pts',
                 style: TextStyle(
                   color: context.appTextSecondary,
                   fontSize: 11,
@@ -491,8 +632,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _leaderboardRow(Map<String, dynamic> entry) {
-    final isYou = entry['name'] == 'You';
+  Widget _leaderboardRow(Map<String, dynamic> entry, String? currentUserId) {
+    final isYou = entry['uid'] == currentUserId;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -525,7 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry['name'] as String,
+                  isYou ? 'You' : entry['name'] as String,
                   style: TextStyle(
                     color: isYou ? AppColors.secondary : context.appTextPrimary,
                     fontSize: 14,
@@ -551,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              '${entry['days']} days',
+              '${entry['points']} pts',
               style: TextStyle(
                 color: isYou ? AppColors.secondary : context.appTextSecondary,
                 fontSize: 12,

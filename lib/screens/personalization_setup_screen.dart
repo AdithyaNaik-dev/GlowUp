@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 import '../widgets/glow_button.dart';
-import 'main_shell.dart';
+import 'auth_screen.dart';
 
 class PersonalizationSetupScreen extends StatefulWidget {
   const PersonalizationSetupScreen({super.key});
@@ -49,7 +49,7 @@ class _PersonalizationSetupScreenState
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const MainShell(),
+              const AuthScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

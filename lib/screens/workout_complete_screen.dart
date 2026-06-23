@@ -28,6 +28,7 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
   Widget build(BuildContext context) {
     final dataService = DataService();
     final streak = dataService.currentStreak;
+    final exercises = dataService.getExercisesForDayWithReps(widget.day);
 
     return Scaffold(
       bottomNavigationBar: const BannerAdWidget(),
@@ -91,13 +92,13 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                   children: [
                     _statItem(Icons.local_fire_department_rounded,
                         '$streak', 'Streak', AppColors.primary),
-                    _statItem(Icons.timer_rounded, '~18', 'Minutes',
+                    _statItem(Icons.timer_rounded, '~${exercises.length * 3}', 'Minutes',
                         AppColors.secondary),
-                    _statItem(Icons.fitness_center_rounded, '6',
+                    _statItem(Icons.fitness_center_rounded, '${exercises.length}',
                         'Exercises', AppColors.warning),
                   ],
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 40),
 
                 // Continue button
                 SizedBox(

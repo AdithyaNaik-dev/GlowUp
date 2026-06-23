@@ -9,7 +9,8 @@
       "image": "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400",
       "category": "face",
       "difficulty": "easy",
-      "voiceInstruction": "Open your mouth wide. Close it slowly. Repeat."
+      "voiceInstruction": "Open your mouth wide. Close it slowly. Repeat.",
+      "steps": ["Open mouth as wide as possible", "Hold for a moment", "Close slowly with control", "Repeat the movement"]
     },
     {
       "id": "face_02",
@@ -20,7 +21,8 @@
       "image": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400",
       "category": "face",
       "difficulty": "easy",
-      "voiceInstruction": "Smile wide stretching your lips. Relax. Repeat."
+      "voiceInstruction": "Smile wide stretching your lips. Relax. Repeat.",
+      "steps": ["Smile as wide as you can", "Stretch lips to the sides", "Hold briefly then relax", "Repeat"]
     },
     {
       "id": "face_03",
@@ -31,7 +33,8 @@
       "image": "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=400",
       "category": "face",
       "difficulty": "easy",
-      "voiceInstruction": "Blink forcefully. Squeeze eyes shut then open wide. Repeat."
+      "voiceInstruction": "Blink forcefully. Squeeze eyes shut then open wide. Repeat.",
+      "steps": ["Squeeze eyes shut forcefully", "Open eyes wide", "Repeat at a steady pace"]
     },
     {
       "id": "face_04",
@@ -42,7 +45,8 @@
       "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400",
       "category": "face",
       "difficulty": "easy",
-      "voiceInstruction": "Raise your eyebrows high. Hold. Relax. Repeat."
+      "voiceInstruction": "Raise your eyebrows high. Hold. Relax. Repeat.",
+      "steps": ["Raise both eyebrows as high as possible", "Hold for a moment", "Relax completely", "Repeat"]
     },
     {
       "id": "face_05",
@@ -53,7 +57,8 @@
       "image": "https://images.unsplash.com/photo-1518459031867-a89b944bffe4?w=400",
       "category": "face",
       "difficulty": "medium",
-      "voiceInstruction": "Pucker your lips forward like a kiss. Hold. Relax. Repeat."
+      "voiceInstruction": "Pucker your lips forward like a kiss. Hold. Relax. Repeat.",
+      "steps": ["Pucker lips like giving a kiss", "Push lips forward", "Hold then relax", "Repeat"]
     },
     {
       "id": "face_06",
@@ -64,7 +69,8 @@
       "image": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400",
       "category": "face",
       "difficulty": "medium",
-      "voiceInstruction": "Wink your left eye. Keep right eye open. Repeat."
+      "voiceInstruction": "Wink your left eye. Keep right eye open. Repeat.",
+      "steps": ["Close your left eye only", "Keep right eye fully open", "Open left eye", "Repeat steadily"]
     },
     {
       "id": "face_07",
@@ -75,7 +81,8 @@
       "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400",
       "category": "face",
       "difficulty": "hard",
-      "voiceInstruction": "Wink your right eye. Keep left eye open. Repeat."
+      "voiceInstruction": "Wink your right eye. Keep left eye open. Repeat.",
+      "steps": ["Close your right eye only", "Keep left eye fully open", "Open right eye", "Repeat steadily"]
     },
     {
       "id": "face_08",
@@ -86,7 +93,152 @@
       "image": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400",
       "category": "face",
       "difficulty": "hard",
-      "voiceInstruction": "Shift your jaw left, then right, then center. Repeat."
+      "voiceInstruction": "Shift your jaw left, then right, then center. Repeat.",
+      "steps": ["Shift jaw to the left", "Then shift to the right", "Return to center", "Repeat the full cycle"]
+    },
+    {
+      "id": "face_09",
+      "name": "Chin Lift",
+      "description": "Tilt your head back gently and look at the ceiling. Push your lower lip over the upper lip. Hold, then return to neutral. Repeat.",
+      "duration": 30,
+      "reps": 12,
+      "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Tilt your head back. Look up at the ceiling. Push lower lip over upper lip. Hold. Return. Repeat.",
+      "steps": ["Tilt head back gently", "Look up at the ceiling", "Push lower lip over upper lip", "Hold then return to neutral"]
+    },
+    {
+      "id": "face_10",
+      "name": "Fish Face",
+      "description": "Suck your cheeks in between your teeth to create a fish face. Hold for a moment, then relax. Repeat.",
+      "duration": 30,
+      "reps": 12,
+      "image": "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Suck cheeks in to make a fish face. Hold. Relax. Repeat.",
+      "steps": ["Suck cheeks in between teeth", "Create a fish face shape", "Hold for a moment", "Relax and repeat"]
+    },
+    {
+      "id": "face_11",
+      "name": "Cheek Lift",
+      "description": "Smile with your mouth closed and push your cheeks upward toward your eyes. Hold, then relax. Repeat.",
+      "duration": 30,
+      "reps": 12,
+      "image": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Smile with mouth closed. Push cheeks up toward eyes. Hold. Relax. Repeat.",
+      "steps": ["Smile with mouth closed", "Push cheeks upward toward eyes", "Hold the lift", "Relax and repeat"]
+    },
+    {
+      "id": "face_12",
+      "name": "Eye Widening",
+      "description": "Open your eyes as wide as possible without raising your eyebrows. Hold, then relax. Repeat.",
+      "duration": 30,
+      "reps": 12,
+      "image": "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=400",
+      "category": "face",
+      "difficulty": "easy",
+      "voiceInstruction": "Open eyes wide without raising eyebrows. Hold. Relax. Repeat.",
+      "steps": ["Open eyes as wide as possible", "Keep eyebrows still", "Hold then relax", "Repeat"]
+    },
+    {
+      "id": "face_13",
+      "name": "Mewing",
+      "description": "Place your tongue flat against the roof of your mouth. Close your lips gently and breathe through your nose. Hold the position.",
+      "duration": 45,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1518459031867-a89b944bffe4?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Press your tongue flat against the roof of your mouth. Close lips gently. Breathe through your nose. Hold.",
+      "steps": ["Press tongue flat on roof of mouth", "Close lips gently", "Breathe through your nose", "Hold the position"]
+    },
+    {
+      "id": "face_14",
+      "name": "Neck Extensions",
+      "description": "Tilt your head back slowly, looking up at the ceiling. Hold at the top, feeling the stretch in your neck. Return to center slowly.",
+      "duration": 30,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400",
+      "category": "face",
+      "difficulty": "easy",
+      "voiceInstruction": "Tilt your head back slowly. Look up. Feel the stretch in your neck. Hold. Return to center.",
+      "steps": ["Tilt head back slowly", "Look up at the ceiling", "Feel the neck stretch", "Hold then return to center"]
+    },
+    {
+      "id": "face_15",
+      "name": "Neck Lift",
+      "description": "Look up toward the ceiling, then push your lower jaw forward and upward. Hold the position, feeling the stretch under your chin.",
+      "duration": 30,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Look up toward ceiling. Push jaw forward and up. Feel stretch under chin. Hold.",
+      "steps": ["Look up toward the ceiling", "Push jaw forward and upward", "Feel stretch under chin", "Hold the position"]
+    },
+    {
+      "id": "face_16",
+      "name": "Jaw Clench Hold",
+      "description": "Clench your jaw firmly, pressing your teeth together. Hold for several seconds, then relax completely. Repeat.",
+      "duration": 25,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Clench your jaw firmly. Press teeth together. Hold. Relax completely.",
+      "steps": ["Clench jaw firmly", "Press teeth together", "Hold for several seconds", "Relax completely"]
+    },
+    {
+      "id": "face_17",
+      "name": "Surprised Face",
+      "description": "Raise both eyebrows as high as possible while simultaneously opening your mouth wide. Hold, then relax. Repeat.",
+      "duration": 30,
+      "reps": 10,
+      "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400",
+      "category": "face",
+      "difficulty": "hard",
+      "voiceInstruction": "Raise eyebrows high and open mouth wide at the same time. Hold. Relax. Repeat.",
+      "steps": ["Raise both eyebrows high", "Open mouth wide at the same time", "Hold the surprised expression", "Relax and repeat"]
+    },
+    {
+      "id": "face_18",
+      "name": "Cheek Puff",
+      "description": "Puff out your cheeks with air while keeping your mouth closed. Hold, then release. Repeat.",
+      "duration": 30,
+      "reps": 12,
+      "image": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Puff out your cheeks with air. Keep mouth closed. Hold. Release. Repeat.",
+      "steps": ["Fill cheeks with air", "Keep mouth sealed tight", "Hold the puff", "Release and repeat"]
+    },
+    {
+      "id": "face_19",
+      "name": "O Face",
+      "description": "Form a narrow 'O' shape with your lips. Keep the opening round and tight while slightly opening your mouth. Hold, then relax.",
+      "duration": 30,
+      "reps": 12,
+      "image": "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400",
+      "category": "face",
+      "difficulty": "medium",
+      "voiceInstruction": "Form a narrow O shape with lips. Keep round and tight. Hold. Relax. Repeat.",
+      "steps": ["Form a narrow O with your lips", "Keep the shape round and tight", "Hold the position", "Relax and repeat"]
+    },
+    {
+      "id": "face_20",
+      "name": "Nose Scrunch",
+      "description": "Scrunch your nose upward as if smelling something bad. Feel the crease form between your eyebrows and nose. Hold, then relax. Repeat.",
+      "duration": 30,
+      "reps": 10,
+      "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400",
+      "category": "face",
+      "difficulty": "hard",
+      "voiceInstruction": "Scrunch your nose upward. Feel the crease form. Hold. Relax. Repeat.",
+      "steps": ["Scrunch nose upward", "Like smelling something bad", "Feel crease between brows and nose", "Hold then relax"]
     }
   ],
   "body_exercises": [
@@ -99,7 +251,8 @@
       "image": "https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=400",
       "category": "body",
       "difficulty": "easy",
-      "voiceInstruction": "Jump and spread your legs while raising arms overhead. Jump back to start."
+      "voiceInstruction": "Jump and spread your legs while raising arms overhead. Jump back to start.",
+      "steps": ["Stand with feet together", "Jump and spread legs wide", "Raise arms overhead", "Jump back to start"]
     },
     {
       "id": "body_02",
@@ -110,7 +263,8 @@
       "image": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400",
       "category": "body",
       "difficulty": "easy",
-      "voiceInstruction": "Stand with feet shoulder width apart. Lower down as if sitting. Keep your back straight."
+      "voiceInstruction": "Stand with feet shoulder width apart. Lower down as if sitting. Keep your back straight.",
+      "steps": ["Stand feet shoulder-width apart", "Lower body like sitting in a chair", "Keep back straight", "Stand back up"]
     },
     {
       "id": "body_03",
@@ -121,7 +275,8 @@
       "image": "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=400",
       "category": "body",
       "difficulty": "easy",
-      "voiceInstruction": "Run in place. Bring your knees up to hip level. Pump your arms."
+      "voiceInstruction": "Run in place. Bring your knees up to hip level. Pump your arms.",
+      "steps": ["Run in place", "Lift knees to hip level", "Pump arms for momentum", "Keep a steady pace"]
     },
     {
       "id": "body_04",
@@ -132,7 +287,8 @@
       "image": "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400",
       "category": "body",
       "difficulty": "easy",
-      "voiceInstruction": "Raise both arms in front above shoulder height. Lower slowly. Repeat."
+      "voiceInstruction": "Raise both arms in front above shoulder height. Lower slowly. Repeat.",
+      "steps": ["Arms at your sides", "Raise both arms straight up", "Go above shoulder height", "Lower slowly and repeat"]
     },
     {
       "id": "body_05",
@@ -143,7 +299,8 @@
       "image": "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?w=400",
       "category": "body",
       "difficulty": "medium",
-      "voiceInstruction": "Start in plank position. Lower your chest to the floor. Push back up."
+      "voiceInstruction": "Start in plank position. Lower your chest to the floor. Push back up.",
+      "steps": ["Start in plank position", "Lower chest to the floor", "Push back up", "Repeat"]
     },
     {
       "id": "body_06",
@@ -154,7 +311,8 @@
       "image": "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=400",
       "category": "body",
       "difficulty": "medium",
-      "voiceInstruction": "Raise one knee to chest. Switch legs. Keep alternating."
+      "voiceInstruction": "Raise one knee to chest. Switch legs. Keep alternating.",
+      "steps": ["Stand tall", "Raise one knee to chest height", "Lower and switch legs", "Keep alternating"]
     },
     {
       "id": "body_07",
@@ -165,7 +323,8 @@
       "image": "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=400",
       "category": "body",
       "difficulty": "medium",
-      "voiceInstruction": "Step wide to one side, then together. Alternate sides."
+      "voiceInstruction": "Step wide to one side, then together. Alternate sides.",
+      "steps": ["Stand with feet together", "Step wide to one side", "Bring feet back together", "Alternate sides"]
     },
     {
       "id": "body_08",
@@ -176,39 +335,126 @@
       "image": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400",
       "category": "body",
       "difficulty": "hard",
-      "voiceInstruction": "Get into push up position. Keep your body straight. Engage your core. Hold."
+      "voiceInstruction": "Get into push up position. Keep your body straight. Engage your core. Hold.",
+      "steps": ["Get into push-up position", "Arms straight, body in a line", "Engage your core", "Hold the position"]
+    },
+    {
+      "id": "body_09",
+      "name": "Burpees",
+      "description": "Start standing. Drop into a squat, kick feet back into plank, return to squat, and jump up with arms overhead.",
+      "duration": 45,
+      "reps": 10,
+      "image": "https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=400",
+      "category": "body",
+      "difficulty": "hard",
+      "voiceInstruction": "Drop to squat. Kick feet back to plank. Return to squat. Jump up with arms overhead.",
+      "steps": ["Drop into a squat", "Kick feet back into plank", "Jump feet back to squat", "Jump up with arms overhead"]
+    },
+    {
+      "id": "body_10",
+      "name": "Wall Sit",
+      "description": "Lean against a wall with your back flat. Slide down until knees are bent at 90 degrees. Hold the position.",
+      "duration": 60,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?w=400",
+      "category": "body",
+      "difficulty": "hard",
+      "voiceInstruction": "Lean against wall. Slide down until knees at 90 degrees. Hold position.",
+      "steps": ["Lean back against a wall", "Slide down until knees at 90 degrees", "Keep back flat on wall", "Hold the position"]
+    },
+    {
+      "id": "body_11",
+      "name": "Mountain Climbers",
+      "description": "Start in plank position. Drive one knee toward your chest, then switch legs quickly. Keep your core tight.",
+      "duration": 45,
+      "reps": 20,
+      "image": "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=400",
+      "category": "body",
+      "difficulty": "medium",
+      "voiceInstruction": "Start in plank. Drive knee to chest. Switch legs quickly. Keep core tight.",
+      "steps": ["Start in plank position", "Drive one knee to chest", "Switch legs quickly", "Keep core tight throughout"]
+    },
+    {
+      "id": "body_12",
+      "name": "Dynamic Plank",
+      "description": "Hold plank position. Alternate between resting on forearms and pushing up to full hands. Keep your core engaged.",
+      "duration": 30,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=400",
+      "category": "body",
+      "difficulty": "medium",
+      "voiceInstruction": "Hold plank. Alternate between forearms and full hands. Keep core tight.",
+      "steps": ["Start in plank on forearms", "Push up to full hands", "Lower back to forearms", "Keep core engaged throughout"]
+    },
+    {
+      "id": "body_13",
+      "name": "Star Crunch",
+      "description": "Lie on your back with arms and legs spread wide in a star shape. Crunch to bring hands and feet together in the middle. Return and repeat.",
+      "duration": 30,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=400",
+      "category": "body",
+      "difficulty": "medium",
+      "voiceInstruction": "Lie on back. Spread arms and legs wide. Crunch to bring hands and feet together. Return. Repeat.",
+      "steps": ["Lie on back in star shape", "Arms and legs spread wide", "Crunch hands and feet together", "Return and repeat"]
+    },
+    {
+      "id": "body_14",
+      "name": "Tuck Crunches",
+      "description": "Lie on your back with hands behind your head. Bring your knees to your chest while lifting your shoulders off the ground. Return and repeat.",
+      "duration": 30,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400",
+      "category": "body",
+      "difficulty": "hard",
+      "voiceInstruction": "Lie on back. Bring knees to chest. Lift shoulders off ground. Return. Repeat.",
+      "steps": ["Lie on back, hands behind head", "Bring knees to chest", "Lift shoulders off ground", "Return and repeat"]
+    },
+    {
+      "id": "body_15",
+      "name": "Rear Lunges",
+      "description": "Stand tall. Step one foot backward into a deep lunge, lowering your back knee toward the floor. Return to standing. Alternate legs.",
+      "duration": 40,
+      "reps": 1,
+      "image": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400",
+      "category": "body",
+      "difficulty": "medium",
+      "voiceInstruction": "Step one foot back into a lunge. Lower back knee. Return to standing. Alternate legs.",
+      "steps": ["Stand tall", "Step one foot backward", "Lower back knee toward floor", "Return to standing, alternate legs"]
     }
   ],
   "daily_plan": [
-    {"day": 1, "phase": "light", "face": ["face_01", "face_02", "face_03"], "body": ["body_01", "body_02", "body_03"], "restBetween": 15},
-    {"day": 2, "phase": "light", "face": ["face_01", "face_03", "face_04"], "body": ["body_01", "body_03", "body_04"], "restBetween": 15},
-    {"day": 3, "phase": "light", "face": ["face_02", "face_03", "face_04"], "body": ["body_02", "body_03", "body_01"], "restBetween": 15},
-    {"day": 4, "phase": "light", "face": ["face_01", "face_04", "face_02"], "body": ["body_01", "body_04", "body_02"], "restBetween": 15},
-    {"day": 5, "phase": "light", "face": ["face_02", "face_01", "face_03"], "body": ["body_03", "body_01", "body_04"], "restBetween": 15},
-    {"day": 6, "phase": "light", "face": ["face_03", "face_04", "face_02"], "body": ["body_02", "body_04", "body_01"], "restBetween": 15},
-    {"day": 7, "phase": "light", "face": ["face_01", "face_02", "face_04"], "body": ["body_01", "body_03", "body_02"], "restBetween": 15},
-    {"day": 8, "phase": "light", "face": ["face_02", "face_03", "face_01"], "body": ["body_04", "body_01", "body_03"], "restBetween": 15},
-    {"day": 9, "phase": "light", "face": ["face_04", "face_02", "face_03"], "body": ["body_02", "body_03", "body_04"], "restBetween": 15},
-    {"day": 10, "phase": "light", "face": ["face_01", "face_03", "face_04"], "body": ["body_01", "body_02", "body_03"], "restBetween": 15},
-    {"day": 11, "phase": "medium", "face": ["face_05", "face_06", "face_04"], "body": ["body_05", "body_06", "body_04"], "restBetween": 12},
-    {"day": 12, "phase": "medium", "face": ["face_01", "face_05", "face_06"], "body": ["body_01", "body_05", "body_06"], "restBetween": 12},
-    {"day": 13, "phase": "medium", "face": ["face_06", "face_04", "face_05"], "body": ["body_06", "body_04", "body_05"], "restBetween": 12},
-    {"day": 14, "phase": "medium", "face": ["face_05", "face_02", "face_04"], "body": ["body_05", "body_02", "body_04"], "restBetween": 12},
-    {"day": 15, "phase": "medium", "face": ["face_06", "face_05", "face_01"], "body": ["body_06", "body_05", "body_01"], "restBetween": 12},
-    {"day": 16, "phase": "medium", "face": ["face_04", "face_06", "face_03"], "body": ["body_04", "body_06", "body_03"], "restBetween": 12},
-    {"day": 17, "phase": "medium", "face": ["face_05", "face_04", "face_06"], "body": ["body_05", "body_04", "body_06"], "restBetween": 12},
-    {"day": 18, "phase": "medium", "face": ["face_06", "face_01", "face_05"], "body": ["body_06", "body_01", "body_05"], "restBetween": 12},
-    {"day": 19, "phase": "medium", "face": ["face_04", "face_05", "face_02"], "body": ["body_04", "body_05", "body_02"], "restBetween": 12},
-    {"day": 20, "phase": "medium", "face": ["face_05", "face_06", "face_04"], "body": ["body_05", "body_06", "body_04"], "restBetween": 12},
-    {"day": 21, "phase": "advanced", "face": ["face_07", "face_08", "face_06"], "body": ["body_07", "body_08", "body_06"], "restBetween": 10},
-    {"day": 22, "phase": "advanced", "face": ["face_08", "face_07", "face_05"], "body": ["body_08", "body_07", "body_05"], "restBetween": 10},
-    {"day": 23, "phase": "advanced", "face": ["face_06", "face_07", "face_08"], "body": ["body_06", "body_07", "body_08"], "restBetween": 10},
-    {"day": 24, "phase": "advanced", "face": ["face_07", "face_05", "face_08"], "body": ["body_07", "body_05", "body_08"], "restBetween": 10},
-    {"day": 25, "phase": "advanced", "face": ["face_08", "face_06", "face_07"], "body": ["body_08", "body_06", "body_07"], "restBetween": 10},
-    {"day": 26, "phase": "advanced", "face": ["face_07", "face_08", "face_04"], "body": ["body_07", "body_08", "body_04"], "restBetween": 10},
-    {"day": 27, "phase": "advanced", "face": ["face_06", "face_08", "face_07"], "body": ["body_06", "body_08", "body_07"], "restBetween": 10},
-    {"day": 28, "phase": "advanced", "face": ["face_08", "face_07", "face_06"], "body": ["body_08", "body_07", "body_06"], "restBetween": 10},
-    {"day": 29, "phase": "advanced", "face": ["face_07", "face_06", "face_08"], "body": ["body_07", "body_06", "body_08"], "restBetween": 10},
-    {"day": 30, "phase": "advanced", "face": ["face_07", "face_08", "face_06"], "body": ["body_07", "body_08", "body_06"], "restBetween": 10}
+    {"day": 1,  "phase": "light", "face": ["face_18","face_19","face_09","face_01","face_12"], "body": ["body_01","body_02","body_03","body_04","body_08"], "restBetween": 15},
+    {"day": 2,  "phase": "light", "face": ["face_05","face_18","face_11","face_02","face_13"], "body": ["body_01","body_03","body_06","body_02","body_12"], "restBetween": 15},
+    {"day": 3,  "phase": "light", "face": ["face_19","face_09","face_05","face_03","face_14"], "body": ["body_01","body_04","body_02","body_07","body_08"], "restBetween": 15},
+    {"day": 4,  "phase": "light", "face": ["face_18","face_11","face_10","face_12","face_01"], "body": ["body_01","body_06","body_03","body_04","body_12"], "restBetween": 15},
+    {"day": 5,  "phase": "light", "face": ["face_19","face_09","face_05","face_02","face_13"], "body": ["body_01","body_02","body_07","body_06","body_08"], "restBetween": 15},
+    {"day": 6,  "phase": "light", "face": ["face_18","face_10","face_11","face_03","face_14"], "body": ["body_01","body_03","body_04","body_02","body_12"], "restBetween": 15},
+    {"day": 7,  "phase": "light", "face": ["face_19","face_05","face_09","face_12","face_01"], "body": ["body_01","body_07","body_06","body_03","body_08"], "restBetween": 15},
+    {"day": 8,  "phase": "light", "face": ["face_18","face_11","face_05","face_13","face_02"], "body": ["body_01","body_04","body_02","body_07","body_12"], "restBetween": 15},
+    {"day": 9,  "phase": "light", "face": ["face_09","face_19","face_10","face_14","face_03"], "body": ["body_01","body_06","body_03","body_08","body_04"], "restBetween": 15},
+    {"day": 10, "phase": "light", "face": ["face_18","face_05","face_11","face_01","face_12"], "body": ["body_01","body_02","body_07","body_06","body_12"], "restBetween": 15},
+
+    {"day": 11, "phase": "medium", "face": ["face_17","face_20","face_06","face_05","face_13"], "body": ["body_01","body_05","body_11","body_06","body_08"], "restBetween": 12},
+    {"day": 12, "phase": "medium", "face": ["face_18","face_19","face_09","face_16","face_12"], "body": ["body_01","body_13","body_15","body_03","body_12"], "restBetween": 12},
+    {"day": 13, "phase": "medium", "face": ["face_20","face_10","face_06","face_15","face_02"], "body": ["body_01","body_11","body_05","body_07","body_13"], "restBetween": 12},
+    {"day": 14, "phase": "medium", "face": ["face_17","face_05","face_11","face_09","face_16"], "body": ["body_01","body_15","body_06","body_02","body_08"], "restBetween": 12},
+    {"day": 15, "phase": "medium", "face": ["face_19","face_20","face_10","face_13","face_01"], "body": ["body_01","body_05","body_11","body_04","body_12"], "restBetween": 12},
+    {"day": 16, "phase": "medium", "face": ["face_18","face_15","face_11","face_03","face_09"], "body": ["body_01","body_13","body_07","body_15","body_06"], "restBetween": 12},
+    {"day": 17, "phase": "medium", "face": ["face_17","face_06","face_20","face_05","face_16"], "body": ["body_01","body_05","body_11","body_02","body_08"], "restBetween": 12},
+    {"day": 18, "phase": "medium", "face": ["face_19","face_11","face_09","face_15","face_12"], "body": ["body_01","body_15","body_13","body_05","body_12"], "restBetween": 12},
+    {"day": 19, "phase": "medium", "face": ["face_20","face_10","face_05","face_14","face_13"], "body": ["body_01","body_06","body_11","body_07","body_13"], "restBetween": 12},
+    {"day": 20, "phase": "medium", "face": ["face_18","face_16","face_06","face_11","face_02"], "body": ["body_01","body_05","body_15","body_08","body_12"], "restBetween": 12},
+
+    {"day": 21, "phase": "advanced", "face": ["face_17","face_20","face_07","face_08","face_13"], "body": ["body_01","body_09","body_10","body_05","body_14"], "restBetween": 10},
+    {"day": 22, "phase": "advanced", "face": ["face_20","face_06","face_11","face_08","face_16"], "body": ["body_01","body_11","body_14","body_02","body_13"], "restBetween": 10},
+    {"day": 23, "phase": "advanced", "face": ["face_17","face_07","face_08","face_05","face_15"], "body": ["body_01","body_09","body_10","body_03","body_12"], "restBetween": 10},
+    {"day": 24, "phase": "advanced", "face": ["face_20","face_19","face_06","face_13","face_09"], "body": ["body_01","body_05","body_14","body_07","body_15"], "restBetween": 10},
+    {"day": 25, "phase": "advanced", "face": ["face_18","face_08","face_11","face_07","face_16"], "body": ["body_01","body_09","body_11","body_08","body_10"], "restBetween": 10},
+    {"day": 26, "phase": "advanced", "face": ["face_17","face_07","face_20","face_15","face_06"], "body": ["body_01","body_14","body_13","body_04","body_09"], "restBetween": 10},
+    {"day": 27, "phase": "advanced", "face": ["face_19","face_08","face_07","face_13","face_02"], "body": ["body_01","body_09","body_05","body_10","body_12"], "restBetween": 10},
+    {"day": 28, "phase": "advanced", "face": ["face_20","face_11","face_09","face_08","face_16"], "body": ["body_01","body_11","body_14","body_15","body_07"], "restBetween": 10},
+    {"day": 29, "phase": "advanced", "face": ["face_18","face_07","face_06","face_15","face_03"], "body": ["body_01","body_09","body_10","body_08","body_13"], "restBetween": 10},
+    {"day": 30, "phase": "advanced", "face": ["face_17","face_08","face_07","face_11","face_01"], "body": ["body_01","body_09","body_14","body_05","body_11"], "restBetween": 10}
   ]
 }

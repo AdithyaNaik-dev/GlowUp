@@ -7,6 +7,7 @@ import 'services/auth_service.dart';
 import 'services/ad_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/health_metrics_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/personalization_setup_screen.dart';
 import 'screens/main_shell.dart';
@@ -18,6 +19,13 @@ void main() async {
   await Firebase.initializeApp();
   await DataService().init();
   await AdService().init();
+  if (AuthService().isSignedIn) {
+    try {
+      await DataService().syncToFirestore();
+    } catch (_) {
+      // Sync may fail due to permissions or network issues; continue startup
+    }
+  }
   runApp(const GlowUpApp());
 }
 
@@ -36,6 +44,7 @@ class _GlowUpAppState extends State<GlowUpApp> {
     super.initState();
     final dataService = DataService();
     final hasCompletedOnboarding = dataService.hasCompletedOnboarding;
+    final hasCompletedHealthMetrics = dataService.hasCompletedHealthMetrics;
     final hasCompletedPersonalization = dataService.hasCompletedPersonalization;
     final hasAuthDone =
         dataService.hasCompletedAuth || dataService.hasSkippedAuth || AuthService().isSignedIn;
@@ -43,10 +52,12 @@ class _GlowUpAppState extends State<GlowUpApp> {
     Widget nextScreen;
     if (!hasCompletedOnboarding) {
       nextScreen = const OnboardingScreen();
-    } else if (!hasAuthDone) {
-      nextScreen = const AuthScreen();
+    } else if (!hasCompletedHealthMetrics) {
+      nextScreen = const HealthMetricsScreen();
     } else if (!hasCompletedPersonalization) {
       nextScreen = const PersonalizationSetupScreen();
+    } else if (!hasAuthDone) {
+      nextScreen = const AuthScreen();
     } else {
       nextScreen = const MainShell();
     }

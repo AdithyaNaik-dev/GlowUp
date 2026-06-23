@@ -82,7 +82,7 @@ class MediapipeBridgeService {
     } on MissingPluginException {
       return const MediapipeFrameResult(poseLandmarks: [], faceLandmarks: []);
     } catch (e) {
-      print("ERROR IN MEDIAPIPE BRIDGE: $e");
+      // Silently fail — MediaPipe may not be available on all devices
       return const MediapipeFrameResult(poseLandmarks: [], faceLandmarks: []);
     }
   }

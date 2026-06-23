@@ -1,4 +1,4 @@
-package com.glowup.glowup
+package com.adithya.glowup
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

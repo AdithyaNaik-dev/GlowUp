@@ -8,7 +8,7 @@
 PRODUCT_NAME = glowup
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.glowup.glowup
+PRODUCT_BUNDLE_IDENTIFIER = com.adithya.glowup
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.glowup. All rights reserved.

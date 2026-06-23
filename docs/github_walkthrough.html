@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GlowUp GitHub Walkthrough</title>
+  <style>
+    :root {
+      --bg: #f6f2ed;
+      --paper: #ffffff;
+      --ink: #1f1a17;
+      --muted: #675f59;
+      --accent: #d63b34;
+      --accent-2: #f0c36a;
+      --line: #e7ddd5;
+      --soft: #fbf8f5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #f8f4ef 0%, #f2ebe4 100%);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 24px auto;
+      padding: 28px;
+    }
+
+    .sheet {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 20px 60px rgba(40, 24, 14, 0.08);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 42px 42px 30px;
+      background:
+        radial-gradient(circle at top right, rgba(214, 59, 52, 0.14), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(240, 195, 106, 0.2), transparent 30%),
+        linear-gradient(135deg, #201915 0%, #2d221d 100%);
+      color: #fff;
+    }
+
+    .kicker {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #f6eadf;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 40px;
+      line-height: 1.08;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.82);
+      margin: 0;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .meta div {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 13px;
+    }
+
+    .meta strong { display: block; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #f0c36a; margin-bottom: 4px; }
+
+    .content {
+      padding: 34px 42px 44px;
+      background: linear-gradient(180deg, #fff 0%, #fffcf9 100%);
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 28px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc li {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--soft);
+      font-size: 14px;
+    }
+
+    h2 {
+      margin: 30px 0 12px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    h3 {
+      margin: 22px 0 10px;
+      font-size: 18px;
+    }
+
+    p { margin: 0 0 12px; color: var(--ink); }
+
+    .note {
+      padding: 14px 16px;
+      background: #fff7e8;
+      border: 1px solid #f0dfb8;
+      border-radius: 14px;
+      color: #6a4b14;
+      font-size: 14px;
+      margin: 14px 0 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+      padding: 16px;
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--accent);
+    }
+
+    ul, ol { margin: 0 0 12px 22px; }
+    li { margin: 6px 0; }
+
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #f6f1eb;
+      padding: 2px 5px;
+      border-radius: 6px;
+      font-size: 0.95em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 12px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th { background: #faf5ef; }
+
+    .footer {
+      padding: 18px 42px 28px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      background: #fff;
+    }
+
+    .path {
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      background: #faf5ef;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 2px 6px;
+      display: inline-block;
+      margin: 2px 0;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; padding: 0; }
+      .sheet { border: none; border-radius: 0; box-shadow: none; }
+      .hero { break-inside: avoid; }
+      .content { padding-bottom: 24px; }
+      .footer { page-break-after: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="sheet">
+      <section class="hero">
+        <div class="kicker">GitHub Walkthrough</div>
+        <h1>GlowUp Repository Walkthrough</h1>
+        <p class="subtitle">
+          A structured overview of the Flutter app, its navigation flow, services, data model, and the main user journey from onboarding to workouts, reports, and settings.
+        </p>
+        <div class="meta">
+          <div><strong>Project Type</strong> Flutter mobile app</div>
+          <div><strong>Primary Stack</strong> Firebase, SharedPreferences, TTS, ads, camera tracking</div>
+          <div><strong>Main Goal</strong> Guided 30-day glow-up challenge</div>
+        </div>
+      </section>
+
+      <section class="content">
+        <ul class="toc">
+          <li>1. Repository overview</li>
+          <li>2. App architecture</li>
+          <li>3. End-to-end user flow</li>
+          <li>4. Core screens</li>
+          <li>5. Services and state</li>
+          <li>6. Data model and assets</li>
+          <li>7. Monetization and integrations</li>
+          <li>8. Setup and notes</li>
+        </ul>
+
+        <h2>1. Repository Overview</h2>
+        <p>
+          GlowUp is a Flutter app built around a structured 30-day challenge. The app guides the user through onboarding, optional authentication, fitness-level personalization, daily workouts, progress tracking, and a settings area for account and app preferences.
+        </p>
+        <p>
+          The project is organized as a standard Flutter monorepo with Android, iOS, web, Linux, macOS, and Windows folders, while the primary product logic lives under <span class="path">lib/</span>.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <strong>What this app does</strong>
+            It runs a day-by-day challenge, adapts reps by fitness level, stores progress locally, and uses voice guidance plus camera-based tracking during workouts.
+          </div>
+          <div class="card">
+            <strong>What makes it notable</strong>
+            It combines a polished consumer UI with fitness logic, Firebase auth, ad support, voice coaching, and data persistence in a single mobile workflow.
+          </div>
+        </div>
+
+        <h2>2. App Architecture</h2>
+        <p>
+          The entrypoint in <span class="path">lib/main.dart</span> initializes Firebase, local data, and ads before deciding where the user should land. The routing logic checks onboarding, authentication, and personalization flags stored in SharedPreferences and then sends the user to the next unfinished step.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Presentation</td>
+              <td>Flutter screens, widgets, animations, and theme handling</td>
+            </tr>
+            <tr>
+              <td>State and persistence</td>
+              <td>SharedPreferences for onboarding, auth, current day, streaks, and fitness level</td>
+            </tr>
+            <tr>
+              <td>Workout logic</td>
+              <td>Exercise plans, rep counts, rest timers, completion flow, and voice cues</td>
+            </tr>
+            <tr>
+              <td>External services</td>
+              <td>Firebase Auth, Google Sign-In, ads, TTS, and camera tracking</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>3. End-to-End User Flow</h2>
+        <ol>
+          <li>The app boots in <span class="path">main.dart</span>, initializes services, and chooses the next screen.</li>
+          <li>If onboarding is not complete, the user sees the three-page onboarding sequence.</li>
+          <li>If auth is required, the user goes to the authentication screen and can sign up, sign in, use Google, or skip.</li>
+          <li>The user chooses a fitness level on the personalization screen.</li>
+          <li>The main shell opens with three tabs: Report, Home, and Settings.</li>
+          <li>The user starts the day’s workout from Home, completes exercises with rep or timer tracking, and lands on the completion screen.</li>
+          <li>Progress is reflected in Report and can be managed from Settings.</li>
+        </ol>
+
+        <div class="note">
+          The app is designed as a funnel: onboarding -> auth -> personalization -> challenge delivery -> progress retention.
+        </div>
+
+        <h2>4. Core Screens</h2>
+
+        <h3>Onboarding</h3>
+        <p>
+          The onboarding screen presents three motivational pages about consistency, healthy eating, and progress tracking. It uses Lottie animations and a single action button that advances page by page before completing onboarding in SharedPreferences.
+        </p>
+
+        <h3>Authentication</h3>
+        <p>
+          The auth screen supports email/password login and Google Sign-In. It also allows skipping auth, which is persisted so the app does not keep prompting the user once they opt out.
+        </p>
+
+        <h3>Personalization</h3>
+        <p>
+          The personalization screen asks the user to pick Beginner, Medium, or Advanced. That choice changes the reps assigned across exercises and is saved locally as part of the onboarding journey.
+        </p>
+
+        <h3>Main Shell</h3>
+        <p>
+          The main shell uses an IndexedStack with three tabs: Report, Home, and Settings. A banner ad is placed below the bottom navigation bar so it remains visible across tabs.
+        </p>
+
+        <h3>Home</h3>
+        <p>
+          The Home screen is the dashboard. It surfaces the current day, streaks, progress percent, calendar status, and a featured workout card. The layout is intentionally layered and visual-heavy to make the daily challenge feel premium.
+        </p>
+
+        <h3>Workout</h3>
+        <p>
+          The workout screen is the most logic-heavy part of the app. It loads exercises for the current day, handles rest intervals, plays audio guidance, manages countdowns, and reacts to tracking snapshots. Timer-based exercises and AI-tracked exercises are handled differently.
+        </p>
+
+        <h3>Workout Complete</h3>
+        <p>
+          After a workout, the app updates streaks and progress, shows a celebratory screen, and triggers an interstitial ad. The user can return to Home from there.
+        </p>
+
+        <h3>Report and Settings</h3>
+        <p>
+          The Report tab summarizes completed workouts, exercises, minutes, history, streaks, and completed days. Settings covers theme switching, account state, sharing, rating, feedback, privacy policy, and a delete-all-data action.
+        </p>
+
+        <h2>5. Services and State</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="path">lib/services/data_service.dart</span></td>
+              <td>Loads the JSON workout plan, tracks onboarding/auth/personalization flags, current day, streaks, and fitness level</td>
+            </tr>
+            <tr>
+              <td><span class="path">lib/services/auth_service.dart</span></td>
+              <td>Wraps Firebase Auth and Google Sign-In, including sign up, sign in, sign out, and delete-account support</td>
+            </tr>
+            <tr>
+              <td><span class="path">lib/services/voice_coach_service.dart</span></td>
+              <td>Uses text-to-speech to guide exercises, countdowns, rest periods, and motivation tips</td>
+            </tr>
+            <tr>
+              <td><span class="path">lib/services/exercise_rep_counter.dart</span></td>
+              <td>Tracks exercise form and reps using face and pose landmarks, plus hold-based logic for timer exercises</td>
+            </tr>
+            <tr>
+              <td><span class="path">lib/services/ad_service.dart</span></td>
+              <td>Initializes and shows ads, including banner and interstitial placements</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          The app relies on SharedPreferences for lightweight persistence. That means the app can restore progress and setup state without a custom backend for core challenge tracking.
+        </p>
+
+        <h2>6. Data Model and Assets</h2>
+        <p>
+          Workout definitions are stored in <span class="path">assets/data/exercise_plan.json</span>. The JSON is loaded by the data service and converted into two main models:
+        </p>
+        <ul>
+          <li><span class="path">Exercise</span>: id, name, description, duration, reps, image, category, difficulty, and voice instruction.</li>
+          <li><span class="path">DayPlan</span>: day number, phase, face exercise ids, body exercise ids, and rest duration.</li>
+        </ul>
+        <p>
+          Assets also include three onboarding animations, a logo, and a hero image used in the home screen. The app is already configured to bundle those assets through <span class="path">pubspec.yaml</span>.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <strong>Key assets</strong>
+            <ul>
+              <li><span class="path">assets/images/logo.jpeg</span></li>
+              <li><span class="path">assets/images/glowup-humans.png</span></li>
+              <li><span class="path">assets/animation/onboarding1.lottie</span></li>
+              <li><span class="path">assets/animation/onboarding2.lottie</span></li>
+              <li><span class="path">assets/animation/onboarding3.lottie</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <strong>Core packages</strong>
+            <ul>
+              <li>Firebase Core and Firebase Auth</li>
+              <li>Google Sign-In</li>
+              <li>Google Mobile Ads</li>
+              <li>Flutter TTS</li>
+              <li>Camera, Lottie, Share Plus, Url Launcher, Shared Preferences</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>7. Monetization and Integrations</h2>
+        <p>
+          The app already includes ad support, which suggests a freemium or ad-supported consumer model. Banner ads appear in the main shell and completion screens, and an interstitial ad is shown after a workout is finished.
+        </p>
+        <p>
+          Firebase Auth enables account creation and sign-in, while the delete-account flow is implemented for compliance. This matters if the app is published to the Play Store and needs to satisfy account deletion requirements.
+        </p>
+
+        <h2>8. Setup and Notes</h2>
+        <p>
+          The project looks ready to run as a standard Flutter app once dependencies are installed and Firebase is configured. The Android app module already includes a <span class="path">google-services.json</span> file, and the repository contains platform folders for the other supported targets.
+        </p>
+        <p>
+          If you are presenting this project, the strongest summary is: GlowUp is a guided fitness and self-improvement challenge app with onboarding, personalization, workout tracking, local progress persistence, voice coaching, Firebase auth, and ad monetization.
+        </p>
+
+        <div class="note">
+          Suggested next step: add screenshots, architecture diagram, and a short demo script if this PDF will be used for investors, recruiters, or product walkthroughs.
+        </div>
+      </section>
+
+      <div class="footer">
+        Generated from the GlowUp workspace structure and source files under lib/, assets/, and pubspec.yaml.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

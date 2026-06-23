@@ -8,6 +8,7 @@ class Exercise {
   final String category; // 'face' or 'body'
   final String difficulty;
   final String voiceInstruction;
+  final List<String> steps;
 
   Exercise({
     required this.id,
@@ -19,6 +20,7 @@ class Exercise {
     required this.category,
     required this.difficulty,
     required this.voiceInstruction,
+    this.steps = const [],
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class Exercise {
       category: json['category'] as String,
       difficulty: json['difficulty'] as String,
       voiceInstruction: json['voiceInstruction'] as String,
+      steps: List<String>.from(json['steps'] ?? []),
     );
   }
 
@@ -46,6 +49,7 @@ class Exercise {
       'category': category,
       'difficulty': difficulty,
       'voiceInstruction': voiceInstruction,
+      'steps': steps,
     };
   }
 }
