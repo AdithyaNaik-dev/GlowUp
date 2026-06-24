@@ -314,30 +314,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authService = AuthService();
     final isSignedIn = authService.isSignedIn;
 
-    if (!isSignedIn) {
-      return _supportCard(context, [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Text(
-            'Sign in to view your customer support details',
-            style: TextStyle(
-              color: context.appTextSecondary,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ]);
+    String? userId;
+    if (isSignedIn) {
+      final userName = DataService().userName;
+      final displayName = userName.isNotEmpty
+          ? userName
+          : authService.displayName.isNotEmpty
+              ? authService.displayName
+              : 'User';
+      userId = displayName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), '_');
+      userId = userId.replaceAll(RegExp(r'[^a-z0-9_]'), '');
     }
-
-    final userName = DataService().userName;
-    final displayName = userName.isNotEmpty
-        ? userName
-        : authService.displayName.isNotEmpty
-            ? authService.displayName
-            : 'User';
-
-    String userId = displayName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), '_');
-    userId = userId.replaceAll(RegExp(r'[^a-z0-9_]'), '');
 
     return _supportCard(context, [
       Padding(
@@ -364,12 +351,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _supportInfoTile(
-              context,
-              label: 'Your ID',
-              value: userId,
-              icon: Icons.badge_rounded,
-            ),
+            if (isSignedIn)
+              _supportInfoTile(
+                context,
+                label: 'Your ID',
+                value: userId!,
+                icon: Icons.badge_rounded,
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: context.appBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.appDivider),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.badge_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Sign in to see your ID',
+                        style: TextStyle(
+                          color: context.appTextSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 12),
             _supportInfoTile(
               context,

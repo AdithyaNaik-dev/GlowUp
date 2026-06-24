@@ -74,15 +74,16 @@ class AuthService {
     // Step 1: Re-authenticate first (required by Firebase for destructive ops)
     await _reauthenticate(user);
 
-    // Step 2: Delete all Firestore documents for this user (by firebaseUid)
-    // Query all documents where firebaseUid matches current user
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('firebaseUid', isEqualTo: user.uid)
-        .get();
-
-    for (final doc in snapshot.docs) {
-      await doc.reference.delete();
+    // Step 2: Delete Firestore document for this email
+    final email = (user.email ?? '').toLowerCase().trim();
+    if (email.isNotEmpty) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+      for (final doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
     }
 
     // Step 3: Delete Firebase Auth account

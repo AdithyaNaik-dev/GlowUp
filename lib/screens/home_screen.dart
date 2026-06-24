@@ -11,6 +11,7 @@ import '../widgets/streak_card.dart';
 import '../widgets/calendar_view.dart';
 import 'workout_screen.dart';
 import 'auth_screen.dart';
+import 'leaderboard_screen.dart';
 import 'notifications_screen.dart';
 import '../services/notification_service.dart';
 
@@ -343,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     final bool isSignedIn = user != null;
 
-    final leaderboardContent = Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -362,129 +363,385 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 14),
-        Container(
-          decoration: BoxDecoration(
-            color: context.appCardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.appDivider),
+        if (isSignedIn)
+          _buildSignedInLeaderboard(user)
+        else
+          _buildLockedLeaderboard(),
+      ],
+    );
+  }
+
+  Widget _buildSignedInLeaderboard(User user) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appCardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.appDivider),
+      ),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .orderBy('points', descending: true)
+            .limit(50)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.all(40.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Text('Leaderboard loading...',
+                    style: TextStyle(color: context.appTextSecondary)),
+              ),
+            );
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Text('No entries yet.',
+                    style: TextStyle(color: context.appTextHint)),
+              ),
+            );
+          }
+
+          final List<Map<String, dynamic>> allEntries = [];
+          for (int i = 0; i < docs.length; i++) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            allEntries.add({
+              'rank': i + 1,
+              'firebaseUid': data['firebaseUid'] ?? '',
+              'displayName': data['displayName'] ?? data['name'] ?? 'User',
+              'points': data['points'] ?? 0,
+              'streak': data['streak'] ?? 0,
+            });
+          }
+
+          final top5 = allEntries.take(5).toList();
+
+          // Find current user's rank in the full list
+          Map<String, dynamic>? myEntry;
+          for (final e in allEntries) {
+            if (e['firebaseUid'] == user.uid) {
+              myEntry = e;
+              break;
+            }
+          }
+
+          return Column(
+            children: [
+              // Podium for top 3
+              if (top5.length >= 3)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 20, horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withAlpha(15),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _podiumItem(top5[1], 60, const Color(0xFFB0BEC5),
+                          user.uid),
+                      _podiumItem(
+                          top5[0], 80, AppColors.primary, user.uid),
+                      _podiumItem(top5[2], 50, const Color(0xFFFF8A65),
+                          user.uid),
+                    ],
+                  ),
+                ),
+              // Your rank card
+              if (myEntry != null) _buildMyRankCard(myEntry),
+              if (top5.length >= 3) const Divider(height: 1),
+              // Rows 4 & 5
+              for (final entry
+                  in top5.skip(top5.length >= 3 ? 3 : 0))
+                _topLeaderboardRow(entry, user.uid),
+              _viewAllButton(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _podiumItem(Map<String, dynamic> entry, double height, Color color,
+      String currentUid) {
+    final isYou = entry['firebaseUid'] == currentUid;
+    final rank = entry['rank'] as int;
+    final Color rankColor;
+    if (rank == 1) {
+      rankColor = const Color(0xFFFFC107);
+    } else if (rank == 2) {
+      rankColor = const Color(0xFFB0BEC5);
+    } else {
+      rankColor = const Color(0xFFFF8A65);
+    }
+    final IconData icon;
+    if (rank == 1) {
+      icon = Icons.emoji_events_rounded;
+    } else if (rank == 2) {
+      icon = Icons.workspace_premium_rounded;
+    } else {
+      icon = Icons.military_tech_rounded;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: rankColor, size: 30),
+        const SizedBox(height: 6),
+        Text(
+          isYou ? 'You' : entry['displayName'] as String,
+          style: TextStyle(
+            color: isYou ? AppColors.primary : context.appTextPrimary,
+            fontSize: 13,
+            fontWeight: isYou ? FontWeight.w800 : FontWeight.w600,
           ),
-          child: StreamBuilder<QuerySnapshot>(
-            stream: isSignedIn
-                ? FirebaseFirestore.instance
-                    .collection('users')
-                    .orderBy('points', descending: true)
-                    .limit(50)
-                    .snapshots()
-                : const Stream.empty(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Center(
-                    child: Text(
-                      'Leaderboard loading...',
-                      style: TextStyle(color: context.appTextSecondary),
-                    ),
-                  ),
-                );
-              }
-
-              final docs = snapshot.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Center(
-                    child: Text(
-                      'No entries yet.',
-                      style: TextStyle(color: context.appTextHint),
-                    ),
-                  ),
-                );
-              }
-
-              final List<Map<String, dynamic>> leaderboard = [];
-              for (int i = 0; i < docs.length; i++) {
-                final data = docs[i].data() as Map<String, dynamic>;
-
-                leaderboard.add({
-                  'rank': i + 1,
-                  'uid': docs[i].id,
-                  'firebaseUid': data['firebaseUid'] ?? '',
-                  'displayName': data['displayName'] ?? data['name'] ?? 'User',
-                  'userId': data['userId'] ?? '',
-                  'points': data['points'] ?? 0,
-                  'streak': data['streak'] ?? 0,
-                });
-              }
-
-              Map<String, dynamic>? myEntry;
-              if (user != null) {
-                for (final e in leaderboard) {
-                  if (e['firebaseUid'] == user.uid) {
-                    myEntry = e;
-                    break;
-                  }
-                }
-              }
-
-              return Column(
-                children: [
-                  if (leaderboard.length >= 3)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary.withAlpha(15),
-                            Colors.transparent,
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _podiumItem(leaderboard[1], 60,
-                              AppColors.textSecondary, user?.uid),
-                          _podiumItem(leaderboard[0], 80,
-                              AppColors.primary, user?.uid),
-                          _podiumItem(leaderboard[2], 50,
-                              AppColors.warning, user?.uid),
-                        ],
-                      ),
-                    ),
-                  if (myEntry != null)
-                    _buildMyRankCard(myEntry),
-                  if (leaderboard.length >= 3) const Divider(height: 1),
-                  ...leaderboard
-                      .skip(leaderboard.length >= 3 ? 3 : 0)
-                      .map((entry) => _leaderboardRow(entry, user?.uid)),
-                ],
-              );
-            },
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 60,
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color.withAlpha(60), color.withAlpha(25)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(10),
+              topRight: Radius.circular(10),
+            ),
+            border: Border.all(color: color.withAlpha(50)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '#$rank',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                '${entry['points']} pts',
+                style: TextStyle(
+                  color: context.appTextSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
+  }
 
-    if (isSignedIn) {
-      return leaderboardContent;
-    } else {
-      return _buildLockedLeaderboard();
-    }
+  Widget _buildMyRankCard(Map<String, dynamic> entry) {
+    final rank = entry['rank'] as int;
+    final points = entry['points'] as int;
+    final streak = entry['streak'] as int;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withAlpha(20),
+            AppColors.primary.withAlpha(8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withAlpha(40)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(30),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                '#$rank',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Rank',
+                  style: TextStyle(
+                    color: context.appTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded,
+                        color: Color(0xFFFF9800), size: 13),
+                    const SizedBox(width: 3),
+                    Text(
+                      '$streak streak',
+                      style: TextStyle(
+                        color: context.appTextHint,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(25),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$points pts',
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _topLeaderboardRow(Map<String, dynamic> entry, String currentUid) {
+    final isYou = entry['firebaseUid'] == currentUid;
+    final rank = entry['rank'] as int;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isYou ? AppColors.primary.withAlpha(10) : null,
+        border: Border(
+          bottom: BorderSide(color: context.appDivider, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              '#$rank',
+              style: TextStyle(
+                color: context.appTextHint,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.star_rounded, color: context.appTextHint, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              isYou ? 'You' : entry['displayName'] as String,
+              style: TextStyle(
+                color: isYou ? AppColors.primary : context.appTextPrimary,
+                fontSize: 14,
+                fontWeight: isYou ? FontWeight.w800 : FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isYou
+                  ? AppColors.primary.withAlpha(25)
+                  : context.appSurface,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${entry['points']} pts',
+              style: TextStyle(
+                color: isYou ? AppColors.primary : context.appTextSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _viewAllButton() {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context)
+            .push(MaterialPageRoute(
+                builder: (_) => const LeaderboardScreen()))
+            .then((_) => setState(() {}));
+      },
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'View All',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_forward_rounded,
+                color: AppColors.primary, size: 18),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildLockedLeaderboard() {
@@ -492,149 +749,117 @@ class _HomeScreenState extends State<HomeScreen> {
     final fakePoints = [1240, 980, 870, 650, 420];
     final fakeStreaks = [14, 10, 7, 5, 3];
 
-    final fakeContent = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    Widget fakeRow(int i) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: context.appDivider, width: 0.5),
+          ),
+        ),
+        child: Row(
           children: [
-            Icon(Icons.leaderboard_rounded,
-                color: AppColors.primary, size: 22),
+            SizedBox(
+              width: 28,
+              child: Text('#${i + 1}',
+                  style: TextStyle(
+                      color: context.appTextHint,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700)),
+            ),
             const SizedBox(width: 8),
-            Text(
-              'Leaderboard',
-              style: TextStyle(
-                color: context.appTextPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+            Icon(Icons.star_rounded, color: context.appTextHint, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(fakeNames[i],
+                      style: TextStyle(
+                          color: context.appTextPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                  Row(children: [
+                    const Icon(Icons.local_fire_department_rounded,
+                        color: Color(0xFFFF9800), size: 13),
+                    const SizedBox(width: 3),
+                    Text('${fakeStreaks[i]} streak',
+                        style: TextStyle(
+                            color: context.appTextHint, fontSize: 11)),
+                  ]),
+                ],
               ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: context.appSurface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text('${fakePoints[i]} pts',
+                  style: TextStyle(
+                      color: context.appTextSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        Container(
-          decoration: BoxDecoration(
-            color: context.appCardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.appDivider),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withAlpha(15),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _fakePodiumItem(fakeNames[1], fakePoints[1], 2, 60),
-                    _fakePodiumItem(fakeNames[0], fakePoints[0], 1, 80),
-                    _fakePodiumItem(fakeNames[2], fakePoints[2], 3, 50),
-                  ],
-                ),
+      );
+    }
+
+    final fakeContent = Container(
+      decoration: BoxDecoration(
+        color: context.appCardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.appDivider),
+      ),
+      child: Column(
+        children: [
+          // Fake podium
+          Container(
+            padding:
+                const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withAlpha(15),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              const Divider(height: 1),
-              for (int i = 3; i < 5; i++)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom:
-                          BorderSide(color: context.appDivider, width: 0.5),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 28,
-                        child: Text(
-                          '#${i + 1}',
-                          style: TextStyle(
-                            color: context.appTextHint,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Icon(Icons.star_rounded,
-                          color: context.appTextHint, size: 22),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              fakeNames[i],
-                              style: TextStyle(
-                                color: context.appTextPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Icon(Icons.local_fire_department_rounded,
-                                    color: const Color(0xFFFF9800),
-                                    size: 13),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${fakeStreaks[i]} streak',
-                                  style: TextStyle(
-                                    color: context.appTextHint,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: context.appSurface,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${fakePoints[i]} pts',
-                          style: TextStyle(
-                            color: context.appTextSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _fakePodiumItem(fakeNames[1], fakePoints[1], 2, 60),
+                _fakePodiumItem(fakeNames[0], fakePoints[0], 1, 80),
+                _fakePodiumItem(fakeNames[2], fakePoints[2], 3, 50),
+              ],
+            ),
           ),
-        ),
-      ],
+          const Divider(height: 1),
+          fakeRow(3),
+          fakeRow(4),
+        ],
+      ),
     );
 
     return Stack(
       children: [
         IgnorePointer(
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: fakeContent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: fakeContent,
+            ),
           ),
         ),
         Positioned.fill(
@@ -702,180 +927,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _fakePodiumItem(String name, int points, int rank, double height) {
-    final color = _rankColor(rank);
+    final Color color;
+    final IconData icon;
+    if (rank == 1) {
+      color = const Color(0xFFFFC107);
+      icon = Icons.emoji_events_rounded;
+    } else if (rank == 2) {
+      color = const Color(0xFFB0BEC5);
+      icon = Icons.workspace_premium_rounded;
+    } else {
+      color = const Color(0xFFFF8A65);
+      icon = Icons.military_tech_rounded;
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(_rankIcon(rank), color: color, size: 30),
+        Icon(icon, color: color, size: 30),
         const SizedBox(height: 6),
-        Text(
-          name,
-          style: TextStyle(
-            color: context.appTextPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: 60,
-          height: height,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color.withAlpha(60), color.withAlpha(25)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(10),
-              topRight: Radius.circular(10),
-            ),
-            border: Border.all(color: color.withAlpha(50)),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '#$rank',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                '$points pts',
-                style: TextStyle(
-                  color: context.appTextSecondary,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  IconData _rankIcon(int rank) {
-    if (rank == 1) return Icons.emoji_events_rounded;
-    if (rank == 2) return Icons.workspace_premium_rounded;
-    if (rank == 3) return Icons.military_tech_rounded;
-    return Icons.star_rounded;
-  }
-
-  Color _rankColor(int rank) {
-    if (rank == 1) return const Color(0xFFFFC107);
-    if (rank == 2) return const Color(0xFFB0BEC5);
-    if (rank == 3) return const Color(0xFFFF8A65);
-    return context.appTextHint;
-  }
-
-  Widget _buildMyRankCard(Map<String, dynamic> entry) {
-    final rank = entry['rank'] as int;
-    final points = entry['points'] as int;
-    final streak = entry['streak'] as int;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withAlpha(20),
-            AppColors.primary.withAlpha(8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withAlpha(40)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(30),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                '#$rank',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Rank',
-                  style: TextStyle(
-                    color: context.appTextPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(Icons.local_fire_department_rounded,
-                        color: const Color(0xFFFF9800), size: 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      '$streak streak',
-                      style: TextStyle(
-                        color: context.appTextHint,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(25),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$points pts',
-              style: const TextStyle(
-                color: AppColors.primary,
+        Text(name,
+            style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _podiumItem(Map<String, dynamic> entry, double height, Color color,
-      String? currentUserId) {
-    final isYou = entry['firebaseUid'] == currentUserId;
-    final rank = entry['rank'] as int;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(_rankIcon(rank), color: _rankColor(rank), size: 30),
-        const SizedBox(height: 6),
-        Text(
-          isYou ? 'You' : entry['displayName'] as String,
-          style: TextStyle(
-            color: isYou ? AppColors.primary : context.appTextPrimary,
-            fontSize: 13,
-            fontWeight: isYou ? FontWeight.w800 : FontWeight.w600,
-          ),
-        ),
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         Container(
           width: 60,
@@ -895,112 +969,18 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '#${entry['rank']}',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                '${entry['points']} pts',
-                style: TextStyle(
-                  color: context.appTextSecondary,
-                  fontSize: 11,
-                ),
-              ),
+              Text('#$rank',
+                  style: TextStyle(
+                      color: color,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800)),
+              Text('$points pts',
+                  style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 11)),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _leaderboardRow(
-      Map<String, dynamic> entry, String? currentUserId) {
-    final isYou = entry['firebaseUid'] == currentUserId;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: isYou ? AppColors.primary.withAlpha(10) : null,
-        border: Border(
-          bottom: BorderSide(color: context.appDivider, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text(
-              '#${entry['rank']}',
-              style: TextStyle(
-                color: context.appTextHint,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Icon(
-            _rankIcon(entry['rank'] as int),
-            color: _rankColor(entry['rank'] as int),
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isYou ? 'You' : entry['displayName'] as String,
-                  style: TextStyle(
-                    color: isYou
-                        ? AppColors.primary
-                        : context.appTextPrimary,
-                    fontSize: 14,
-                    fontWeight: isYou ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.local_fire_department_rounded,
-                        color: const Color(0xFFFF9800), size: 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${entry['streak']} streak',
-                      style: TextStyle(
-                        color: context.appTextHint,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: isYou
-                  ? AppColors.primary.withAlpha(25)
-                  : context.appSurface,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '${entry['points']} pts',
-              style: TextStyle(
-                color: isYou
-                    ? AppColors.primary
-                    : context.appTextSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1008,8 +988,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final hour = DateTime.now().hour;
     final name = _dataService.userName;
     final suffix = name.isNotEmpty ? ', $name' : '';
-    if (hour < 12) return 'Good Morning$suffix';
-    if (hour < 17) return 'Good Afternoon$suffix';
-    return 'Good Evening$suffix';
+    if (hour < 12) return 'Hello$suffix';
+    if (hour < 17) return 'Hello$suffix';
+    return 'Hello$suffix';
   }
 }

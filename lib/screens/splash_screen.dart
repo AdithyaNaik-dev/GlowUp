@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../config/theme.dart';
 
 class SplashScreen extends StatefulWidget {
-  final Widget nextScreen;
+  final Future<Widget> initFuture;
 
-  const SplashScreen({super.key, required this.nextScreen});
+  const SplashScreen({super.key, required this.initFuture});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -14,6 +13,10 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _textFade;
+
+  bool _minTimeElapsed = false;
+  Widget? _nextScreen;
+  bool _navigated = false;
 
   @override
   void initState() {
@@ -26,26 +29,36 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
 
-    // Short delay so the logo feels already present, then fade in text
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _controller.forward();
     });
 
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                widget.nextScreen,
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
-      }
+    // Minimum splash so the animation plays
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      _minTimeElapsed = true;
+      _tryNavigate();
     });
+
+    // Wait for background init to finish
+    widget.initFuture.then((screen) {
+      _nextScreen = screen;
+      _tryNavigate();
+    });
+  }
+
+  void _tryNavigate() {
+    if (_navigated || !_minTimeElapsed || _nextScreen == null || !mounted) {
+      return;
+    }
+    _navigated = true;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => _nextScreen!,
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+    );
   }
 
   @override
@@ -57,12 +70,11 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.appBackground,
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Logo appears instantly — seamless from native splash
             ClipRRect(
               borderRadius: BorderRadius.circular(28),
               child: Image.asset(
@@ -73,7 +85,6 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
             const SizedBox(height: 24),
-            // Text fades in after a beat
             FadeTransition(
               opacity: _textFade,
               child: Column(
@@ -81,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen>
                   Text(
                     'GlowUp',
                     style: TextStyle(
-                      color: context.appTextPrimary,
+                      color: const Color(0xFF1A1A1A),
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -91,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen>
                   Text(
                     '30 Day Challenge',
                     style: TextStyle(
-                      color: context.appTextSecondary,
+                      color: const Color(0xFF757575),
                       fontSize: 16,
                     ),
                   ),

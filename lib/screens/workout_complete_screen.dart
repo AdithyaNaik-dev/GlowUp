@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+import 'package:dotlottie_loader/dotlottie_loader.dart';
 import '../config/theme.dart';
 import '../services/data_service.dart';
 import '../services/ad_service.dart';
@@ -15,12 +17,21 @@ class WorkoutCompleteScreen extends StatefulWidget {
 }
 
 class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
+  bool _showContent = false;
+
   @override
   void initState() {
     super.initState();
-    // Show interstitial ad after workout completion
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      AdService().showInterstitialAd();
+      AdService().showInterstitialAd(
+        onAdDismissed: _startAnimations,
+      );
+    });
+  }
+
+  void _startAnimations() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _showContent = true);
     });
   }
 
@@ -32,38 +43,53 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
 
     return Scaffold(
       bottomNavigationBar: const BannerAdWidget(),
-      body: SafeArea(
+      body: Stack(
+        children: [
+          // Confetti background
+          if (_showContent)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DotLottieLoader.fromAsset(
+                  'assets/animation/Confetti - Full Screen.lottie',
+                  frameBuilder: (ctx, dotlottie) {
+                    if (dotlottie != null) {
+                      return Lottie.memory(
+                        dotlottie.animations.values.single,
+                        fit: BoxFit.cover,
+                        repeat: false,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+          SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Celebration icon
-                Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.secondary,
-                        AppColors.secondary.withAlpha(180),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.secondary.withAlpha(60),
-                        blurRadius: 40,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    color: Colors.black,
-                    size: 72,
-                  ),
+                // Completed tick animation
+                SizedBox(
+                  width: 240,
+                  height: 240,
+                  child: _showContent
+                      ? DotLottieLoader.fromAsset(
+                          'assets/animation/Completed.lottie',
+                          frameBuilder: (ctx, dotlottie) {
+                            if (dotlottie != null) {
+                              return Lottie.memory(
+                                dotlottie.animations.values.single,
+                                fit: BoxFit.contain,
+                                repeat: true,
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        )
+                      : const SizedBox.shrink(),
                 ),
                 const SizedBox(height: 40),
                 const Text(
@@ -133,6 +159,8 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
             ),
           ),
         ),
+          ),
+        ],
       ),
     );
   }

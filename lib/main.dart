@@ -19,18 +19,37 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await DataService().init();
-  await NotificationService().init();
-  await AdService().init();
-  if (AuthService().isSignedIn) {
-    try {
-      await DataService().syncToFirestore();
-    } catch (_) {}
-  }
+  runApp(const GlowUpApp());
+}
+
+Future<Widget> _loadRemainingServices() async {
+  await Future.wait([
+    NotificationService().init(),
+    AdService().init(),
+    if (AuthService().isSignedIn) _syncUser(),
+  ]);
+
   await NotificationService().checkStreakBroken(
     previousStreak: DataService().currentStreak,
     lastWorkoutDate: DataService().lastWorkoutDate,
   );
-  runApp(const GlowUpApp());
+
+  final ds = DataService();
+  final authDone =
+      ds.hasCompletedAuth || ds.hasSkippedAuth || AuthService().isSignedIn;
+
+  if (!ds.hasCompletedOnboarding) return const OnboardingScreen();
+  if (!ds.hasCompletedHealthMetrics) return const HealthMetricsScreen();
+  if (!ds.hasCompletedPersonalization) return const PersonalizationSetupScreen();
+  if (!authDone) return const AuthScreen();
+  return const MainShell();
+}
+
+Future<void> _syncUser() async {
+  try {
+    await DataService().syncToFirestore();
+    await DataService().applyPointsDecay();
+  } catch (_) {}
 }
 
 class GlowUpApp extends StatefulWidget {
@@ -41,31 +60,12 @@ class GlowUpApp extends StatefulWidget {
 }
 
 class _GlowUpAppState extends State<GlowUpApp> {
-  late final Widget _home;
+  late final Future<Widget> _initFuture;
 
   @override
   void initState() {
     super.initState();
-    final dataService = DataService();
-    final hasCompletedOnboarding = dataService.hasCompletedOnboarding;
-    final hasCompletedHealthMetrics = dataService.hasCompletedHealthMetrics;
-    final hasCompletedPersonalization = dataService.hasCompletedPersonalization;
-    final hasAuthDone =
-        dataService.hasCompletedAuth || dataService.hasSkippedAuth || AuthService().isSignedIn;
-
-    Widget nextScreen;
-    if (!hasCompletedOnboarding) {
-      nextScreen = const OnboardingScreen();
-    } else if (!hasCompletedHealthMetrics) {
-      nextScreen = const HealthMetricsScreen();
-    } else if (!hasCompletedPersonalization) {
-      nextScreen = const PersonalizationSetupScreen();
-    } else if (!hasAuthDone) {
-      nextScreen = const AuthScreen();
-    } else {
-      nextScreen = const MainShell();
-    }
-    _home = SplashScreen(nextScreen: nextScreen);
+    _initFuture = _loadRemainingServices();
   }
 
   @override
@@ -79,7 +79,7 @@ class _GlowUpAppState extends State<GlowUpApp> {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeNotifier.themeMode,
-          home: _home,
+          home: SplashScreen(initFuture: _initFuture),
         );
       },
     );

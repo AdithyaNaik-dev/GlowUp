@@ -51,3 +51,5 @@ flutter:
     - assets/animation/start.lottie
     - assets/animation/rest.lottie
     - "assets/animation/Empty Notifications.lottie"
+    - "assets/animation/Confetti - Full Screen.lottie"
+    - assets/animation/Completed.lottie

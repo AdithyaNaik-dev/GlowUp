@@ -131,21 +131,31 @@ class DataService {
 
       // Store last workout date for date-based streak tracking
       final today = DateTime.now();
-      await _prefs?.setString(
-        'last_workout_date',
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}',
-      );
+      final todayStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
-      // Calculate and add points
-      final streakBeforeCompletion = currentStreak;
-      double multiplier = 1.0;
-      if (streakBeforeCompletion >= 4 && streakBeforeCompletion <= 6) {
-        multiplier = 1.5;
-      } else if (streakBeforeCompletion >= 7) {
-        multiplier = 2.0;
+      // Daily cap: only award points for the first workout of the day
+      final previousWorkoutDate = lastWorkoutDate;
+      final alreadyWorkedOutToday = previousWorkoutDate == todayStr;
+
+      await _prefs?.setString('last_workout_date', todayStr);
+
+      if (!alreadyWorkedOutToday) {
+        // Extended streak multiplier tiers
+        final streak = currentStreak;
+        double multiplier = 1.0;
+        if (streak >= 30) {
+          multiplier = 3.0;
+        } else if (streak >= 14) {
+          multiplier = 2.5;
+        } else if (streak >= 7) {
+          multiplier = 2.0;
+        } else if (streak >= 4) {
+          multiplier = 1.5;
+        }
+        final earnedPoints = (100 * multiplier).round();
+        await addPoints(earnedPoints);
       }
-      int earnedPoints = (100 * multiplier).round();
-      await addPoints(earnedPoints);
 
       await NotificationService().onWorkoutComplete(
         day: day,
@@ -207,19 +217,80 @@ class DataService {
   int get currentStreak => _prefs?.getInt('current_streak') ?? 0;
   int get bestStreak => _prefs?.getInt('best_streak') ?? 0;
   int get points => _prefs?.getInt('points') ?? 0;
+  int get weeklyPoints => _prefs?.getInt('weekly_points') ?? 0;
+  int get monthlyPoints => _prefs?.getInt('monthly_points') ?? 0;
 
   Future<void> addPoints(int earned) async {
-    int p = points + earned;
-    await _prefs?.setInt('points', p);
+    _resetWeeklyMonthlyIfNeeded();
+
+    await _prefs?.setInt('points', points + earned);
+    await _prefs?.setInt('weekly_points', weeklyPoints + earned);
+    await _prefs?.setInt('monthly_points', monthlyPoints + earned);
     await _updatePointsInFirestore();
   }
 
+  // --- Weekly / Monthly reset helpers ---
+
+  String _currentWeekStart() {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return '${monday.year}-${monday.month.toString().padLeft(2, '0')}-${monday.day.toString().padLeft(2, '0')}';
+  }
+
+  String _currentMonthKey() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
+  void _resetWeeklyMonthlyIfNeeded() {
+    final storedWeek = _prefs?.getString('week_start') ?? '';
+    final currentWeek = _currentWeekStart();
+    if (storedWeek != currentWeek) {
+      _prefs?.setInt('weekly_points', 0);
+      _prefs?.setString('week_start', currentWeek);
+    }
+
+    final storedMonth = _prefs?.getString('month_key') ?? '';
+    final currentMonth = _currentMonthKey();
+    if (storedMonth != currentMonth) {
+      _prefs?.setInt('monthly_points', 0);
+      _prefs?.setString('month_key', currentMonth);
+    }
+  }
+
+  // --- Points decay for inactivity (5% per inactive week) ---
+
+  Future<void> applyPointsDecay() async {
+    final lastDate = lastWorkoutDate;
+    if (lastDate.isEmpty) return;
+    try {
+      final lastWorkout = DateTime.parse(lastDate);
+      final daysSince = DateTime.now().difference(lastWorkout).inDays;
+      if (daysSince < 7) return;
+
+      final lastDecay = _prefs?.getString('last_decay_date') ?? '';
+      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+      if (lastDecay == todayStr) return;
+
+      final weeksInactive = daysSince ~/ 7;
+      double factor = 1.0;
+      for (int i = 0; i < weeksInactive; i++) {
+        factor *= 0.95;
+      }
+      final decayedPoints = (points * factor).round();
+      if (decayedPoints < points) {
+        await _prefs?.setInt('points', decayedPoints);
+        await _prefs?.setString('last_decay_date', todayStr);
+        await _updatePointsInFirestore();
+      }
+    } catch (_) {}
+  }
+
   String _generateUserId(String email) {
-    // Use email as the unique identifier (guaranteed unique per OAuth account)
-    // Remove everything after @ and special characters
-    // Example: "adithya2005an@gmail.com" → "adithya2005an"
-    final emailPrefix = email.split('@')[0].toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '');
-    return emailPrefix.isEmpty ? 'user' : emailPrefix;
+    // Use full email so different domains never collide
+    // Firestore doc IDs allow most chars except '/'
+    final sanitized = email.toLowerCase().trim().replaceAll('/', '_');
+    return sanitized.isEmpty ? 'user' : sanitized;
   }
 
   Future<void> syncToFirestore() async {
@@ -230,60 +301,73 @@ class DataService {
     if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
     if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
 
-    // Check if we have a cached userId (from previous login)
-    String cachedUserId = _prefs?.getString('firestore_user_id') ?? '';
+    final userEmail = (user.email ?? '').toLowerCase().trim();
+    if (userEmail.isEmpty) return;
 
-    // Try to find existing document by firebaseUid first
-    String userId = cachedUserId;
+    // Capture local state BEFORE any overwrites to detect fresh install
+    final localPoints = points;
+    final localStreak = currentStreak;
+    final localBestStreak = bestStreak;
+    final localCompletedDays = completedDays;
+    final localCurrentDay = currentDay;
+    final localTotalWorkouts = totalWorkoutsCompleted;
+    final localLastWorkoutDate = lastWorkoutDate;
+    final localLikedExercises = likedExerciseIds;
+
+    // ── RULE: email is the sole identity key ──
+    // Same email  → find & update that document
+    // New email   → create a brand-new document
+
     DocumentSnapshot? docSnap;
     DocumentReference? docRef;
+    String userId = '';
 
-    if (cachedUserId.isNotEmpty) {
-      // Use cached userId
-      docRef = FirebaseFirestore.instance.collection('users').doc(cachedUserId);
-      docSnap = await docRef.get();
+    // 1. Query by email — the one and only lookup
+    final query = await FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: userEmail)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      docSnap = query.docs.first;
+      userId = docSnap.id;
+      docRef = docSnap.reference;
     }
+
+    // 2. Not found → this email has never been seen, create a new doc
+    if (docSnap == null) {
+      userId = _generateUserId(userEmail);
+      docRef = FirebaseFirestore.instance.collection('users').doc(userId);
+    }
+
+    // Cache the doc ID for this session (fast-path for _updatePoints etc.)
+    await _prefs?.setString('firestore_user_id', userId);
 
     if (docSnap == null || !docSnap.exists) {
-      // Try to find by firebaseUid query
-      final query = await FirebaseFirestore.instance
-          .collection('users')
-          .where('firebaseUid', isEqualTo: user.uid)
-          .limit(1)
-          .get();
-
-      if (query.docs.isNotEmpty) {
-        // Found existing document - use its userId
-        docSnap = query.docs.first;
-        userId = docSnap.id;
-        docRef = docSnap.reference;
-        // Cache this userId for next time
-        await _prefs?.setString('firestore_user_id', userId);
-      } else {
-        // New user - generate new userId from email (unique identifier)
-        userId = _generateUserId(user.email ?? '');
-        docRef = FirebaseFirestore.instance.collection('users').doc(userId);
-        docSnap = await docRef.get();
-        // Cache this userId
-        await _prefs?.setString('firestore_user_id', userId);
-      }
-    }
-
-    if (!docSnap.exists) {
-      // New user — push local data to Firestore
-      final data = {
+      // ── New email → new document ──
+      _resetWeeklyMonthlyIfNeeded();
+      final data = <String, dynamic>{
         'firebaseUid': user.uid,
         'userId': userId,
         'displayName': displayName,
-        'email': user.email ?? '',
-        'points': points,
-        'streak': currentStreak,
-        'bestStreak': bestStreak,
-        'totalWorkouts': totalWorkoutsCompleted,
+        'email': userEmail,
+        'points': localPoints,
+        'weeklyPoints': weeklyPoints,
+        'monthlyPoints': monthlyPoints,
+        'weekStart': _currentWeekStart(),
+        'monthKey': _currentMonthKey(),
+        'streak': localStreak,
+        'bestStreak': localBestStreak,
+        'totalWorkouts': localTotalWorkouts,
+        'currentDay': localCurrentDay,
+        'completedDays': localCompletedDays.map((e) => e.toString()).toList(),
+        'lastWorkoutDate': localLastWorkoutDate,
+        'likedExercises': localLikedExercises.toList(),
         'support': {
           'email': 'glowup.officialapp@gmail.com',
           'userId': userId,
-          'userEmail': user.email ?? '',
+          'userEmail': userEmail,
         },
         'createdAt': FieldValue.serverTimestamp(),
         'lastActive': FieldValue.serverTimestamp(),
@@ -293,33 +377,101 @@ class DataService {
       }
       await docRef!.set(data);
     } else {
-      // Existing user — merge: take the higher values
+      // ── Same email → update existing document ──
       final data = docSnap.data() as Map<String, dynamic>;
-      final firestorePoints = data['points'] as int? ?? 0;
+      var firestorePoints = data['points'] as int? ?? 0;
       final firestoreStreak = data['streak'] as int? ?? 0;
       final firestoreBestStreak = data['bestStreak'] as int? ?? 0;
       final firestoreDisplayName = data['displayName'] as String? ?? '';
       final firestoreUserId = data['userId'] as String? ?? userId;
       final firestoreTotalWorkouts = data['totalWorkouts'] as int? ?? 0;
+      final firestoreCurrentDay = data['currentDay'] as int? ?? 1;
+      final firestoreLastWorkoutDate = data['lastWorkoutDate'] as String? ?? '';
+      final firestoreCompletedDays = (data['completedDays'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+      final firestoreLikedExercises = (data['likedExercises'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+      final firestoreWeekStart = data['weekStart'] as String? ?? '';
+      final firestoreMonthKey = data['monthKey'] as String? ?? '';
+      var firestoreWeeklyPoints = data['weeklyPoints'] as int? ?? 0;
+      var firestoreMonthlyPoints = data['monthlyPoints'] as int? ?? 0;
 
-      final mergedPoints = points > firestorePoints ? points : firestorePoints;
-      final mergedStreak = currentStreak > firestoreStreak ? currentStreak : firestoreStreak;
-      final mergedBestStreak = bestStreak > firestoreBestStreak ? bestStreak : firestoreBestStreak;
+      // Reset stale weekly/monthly from Firestore
+      if (firestoreWeekStart != _currentWeekStart()) firestoreWeeklyPoints = 0;
+      if (firestoreMonthKey != _currentMonthKey()) firestoreMonthlyPoints = 0;
+
+      // Apply points decay for inactivity (5% per inactive week)
+      final decaySource = firestoreLastWorkoutDate.isNotEmpty
+          ? firestoreLastWorkoutDate
+          : localLastWorkoutDate;
+      if (decaySource.isNotEmpty) {
+        try {
+          final daysSince =
+              DateTime.now().difference(DateTime.parse(decaySource)).inDays;
+          if (daysSince >= 7) {
+            double factor = 1.0;
+            for (int i = 0; i < daysSince ~/ 7; i++) {
+              factor *= 0.95;
+            }
+            firestorePoints = (firestorePoints * factor).round();
+          }
+        } catch (_) {}
+      }
+
+      final isFreshInstall =
+          localPoints == 0 && localCompletedDays.isEmpty && localCurrentDay == 1;
+
+      _resetWeeklyMonthlyIfNeeded();
+      final localWeekly = weeklyPoints;
+      final localMonthly = monthlyPoints;
+
+      final mergedPoints = localPoints > firestorePoints ? localPoints : firestorePoints;
+      final mergedStreak = localStreak > firestoreStreak ? localStreak : firestoreStreak;
+      final mergedBestStreak = localBestStreak > firestoreBestStreak ? localBestStreak : firestoreBestStreak;
       final mergedDisplayName = displayName.isNotEmpty ? displayName : firestoreDisplayName;
+      final mergedTotalWorkouts = localTotalWorkouts > firestoreTotalWorkouts ? localTotalWorkouts : firestoreTotalWorkouts;
+      final mergedCurrentDay = localCurrentDay > firestoreCurrentDay ? localCurrentDay : firestoreCurrentDay;
+      final mergedWeekly = localWeekly > firestoreWeeklyPoints ? localWeekly : firestoreWeeklyPoints;
+      final mergedMonthly = localMonthly > firestoreMonthlyPoints ? localMonthly : firestoreMonthlyPoints;
 
-      final updateData = {
+      final mergedCompletedDaysStr = <String>{
+        ...localCompletedDays.map((e) => e.toString()),
+        ...firestoreCompletedDays,
+      };
+
+      final mergedLastWorkoutDate =
+          _moreRecentDate(localLastWorkoutDate, firestoreLastWorkoutDate);
+
+      final mergedLikedExercises = <String>{
+        ...localLikedExercises,
+        ...firestoreLikedExercises,
+      };
+
+      final updateData = <String, dynamic>{
         'firebaseUid': user.uid,
         'userId': firestoreUserId,
         'displayName': mergedDisplayName,
-        'email': user.email ?? '',
+        'email': userEmail,
         'streak': mergedStreak,
         'bestStreak': mergedBestStreak,
         'points': mergedPoints,
-        'totalWorkouts': mergedPoints > firestorePoints ? totalWorkoutsCompleted : firestoreTotalWorkouts,
+        'weeklyPoints': mergedWeekly,
+        'monthlyPoints': mergedMonthly,
+        'weekStart': _currentWeekStart(),
+        'monthKey': _currentMonthKey(),
+        'totalWorkouts': mergedTotalWorkouts,
+        'currentDay': mergedCurrentDay,
+        'completedDays': mergedCompletedDaysStr.toList(),
+        'lastWorkoutDate': mergedLastWorkoutDate,
+        'likedExercises': mergedLikedExercises.toList(),
         'support': {
           'email': 'glowup.officialapp@gmail.com',
           'userId': firestoreUserId,
-          'userEmail': user.email ?? '',
+          'userEmail': userEmail,
         },
         'lastActive': FieldValue.serverTimestamp(),
       };
@@ -328,45 +480,60 @@ class DataService {
       }
       await docRef!.update(updateData);
 
-      // Pull Firestore data into local - ALWAYS sync on fresh install
+      // ── Pull merged data into local SharedPreferences ──
       await _prefs?.setInt('points', mergedPoints);
+      await _prefs?.setInt('weekly_points', mergedWeekly);
+      await _prefs?.setInt('monthly_points', mergedMonthly);
+      await _prefs?.setString('week_start', _currentWeekStart());
+      await _prefs?.setString('month_key', _currentMonthKey());
       await _prefs?.setInt('current_streak', mergedStreak);
       await _prefs?.setInt('best_streak', mergedBestStreak);
       await _prefs?.setString('user_name', mergedDisplayName);
+      await _prefs?.setInt('total_workouts_completed', mergedTotalWorkouts);
+      await _prefs?.setInt('current_day', mergedCurrentDay);
+      await _prefs?.setString('last_workout_date', mergedLastWorkoutDate);
+      await _prefs?.setStringList('completed_days', mergedCompletedDaysStr.toList());
+      await _prefs?.setStringList('liked_exercises', mergedLikedExercises.toList());
 
-      // Restore completed days from Firestore if this is a fresh install
-      // (local points are 0 but Firestore has data)
-      if (points == 0 && firestorePoints > 0) {
-        // This is a fresh install with existing backend data
-        // We need to restore the workout state
-        await _restoreWorkoutProgress(firestorePoints, mergedStreak);
+      // On fresh install with existing data, skip setup screens
+      if (isFreshInstall && firestorePoints > 0) {
+        await _prefs?.setBool('onboarding_complete', true);
+        await _prefs?.setBool('health_metrics_complete', true);
+        await _prefs?.setBool('personalization_complete', true);
+        await _prefs?.setBool('auth_complete', true);
       }
     }
   }
 
-  Future<void> _restoreWorkoutProgress(int points, int streak) async {
-    // Estimate completed days from points (each workout is ~100 points base)
-    int estimatedCompletedDays = (points / 100).round();
-    if (estimatedCompletedDays > 0) {
-      final completedDays = List.generate(estimatedCompletedDays, (i) => (i + 1).toString());
-      await _prefs?.setStringList('completed_days', completedDays);
+  String _moreRecentDate(String a, String b) {
+    if (a.isEmpty) return b;
+    if (b.isEmpty) return a;
+    try {
+      return DateTime.parse(a).isAfter(DateTime.parse(b)) ? a : b;
+    } catch (_) {
+      return a;
     }
-
-    // Restore streak
-    await _prefs?.setInt('current_streak', streak);
   }
 
   Future<void> _updatePointsInFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final userId = _generateUserId(user.email ?? '');
+    final docId = _prefs?.getString('firestore_user_id') ?? '';
+    if (docId.isEmpty) return;
 
-    await FirebaseFirestore.instance.collection('users').doc(userId).set({
+    await FirebaseFirestore.instance.collection('users').doc(docId).set({
       'points': points,
+      'weeklyPoints': weeklyPoints,
+      'monthlyPoints': monthlyPoints,
+      'weekStart': _currentWeekStart(),
+      'monthKey': _currentMonthKey(),
       'streak': currentStreak,
       'bestStreak': bestStreak,
       'totalWorkouts': totalWorkoutsCompleted,
+      'currentDay': currentDay,
+      'completedDays': completedDays.map((e) => e.toString()).toList(),
+      'lastWorkoutDate': lastWorkoutDate,
       'lastActive': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -462,6 +629,18 @@ class DataService {
   Future<void> clearAuthState() async {
     await _prefs?.remove('auth_skipped');
     await _prefs?.remove('auth_complete');
+    await _prefs?.remove('firestore_user_id');
+
+    // Clear all user-specific data so the next account starts fresh
+    await _prefs?.remove('points');
+    await _prefs?.remove('current_streak');
+    await _prefs?.remove('best_streak');
+    await _prefs?.remove('current_day');
+    await _prefs?.remove('completed_days');
+    await _prefs?.remove('total_workouts_completed');
+    await _prefs?.remove('last_workout_date');
+    await _prefs?.remove('liked_exercises');
+    await _prefs?.remove('user_name');
   }
 
   int get baseReps {
@@ -517,9 +696,10 @@ class DataService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final userId = _generateUserId(user.email ?? '');
+    final docId = _prefs?.getString('firestore_user_id') ?? '';
+    if (docId.isEmpty) return;
 
-    await FirebaseFirestore.instance.collection('users').doc(userId).set({
+    await FirebaseFirestore.instance.collection('users').doc(docId).set({
       'likedExercises': likedExerciseIds.toList(),
     }, SetOptions(merge: true));
   }
@@ -528,11 +708,12 @@ class DataService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      final userId = _generateUserId(user.email ?? '');
+      final docId = _prefs?.getString('firestore_user_id') ?? '';
+      if (docId.isEmpty) return;
 
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(userId)
+          .doc(docId)
           .delete();
     } catch (_) {}
   }
