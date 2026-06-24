@@ -88,6 +88,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildAccountSection(context),
             const SizedBox(height: 32),
 
+            _sectionTitle('Customer Support'),
+            const SizedBox(height: 14),
+            _buildCustomerSupportSection(context),
+            const SizedBox(height: 32),
+
             _sectionTitle('Support us'),
             const SizedBox(height: 14),
             _supportCard(context, [
@@ -117,18 +122,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.description_outlined,
                 label: 'Privacy Policy',
                 onTap: () => _openPrivacyPolicy(context),
-              ),
-            ]),
-            const SizedBox(height: 24),
-
-            _supportCard(context, [
-              _supportTile(
-                context,
-                icon: Icons.delete_outline_rounded,
-                label: 'Delete all data',
-                iconColor: AppColors.primary,
-                textColor: AppColors.primary,
-                onTap: () => _confirmDeleteAll(context),
               ),
             ]),
             const SizedBox(height: 24),
@@ -317,6 +310,136 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Widget _buildCustomerSupportSection(BuildContext context) {
+    final authService = AuthService();
+    final isSignedIn = authService.isSignedIn;
+
+    if (!isSignedIn) {
+      return _supportCard(context, [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Text(
+            'Sign in to view your customer support details',
+            style: TextStyle(
+              color: context.appTextSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ]);
+    }
+
+    final userName = DataService().userName;
+    final displayName = userName.isNotEmpty
+        ? userName
+        : authService.displayName.isNotEmpty
+            ? authService.displayName
+            : 'User';
+
+    String userId = displayName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), '_');
+    userId = userId.replaceAll(RegExp(r'[^a-z0-9_]'), '');
+
+    return _supportCard(context, [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.support_agent_rounded,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Contact Support',
+                  style: TextStyle(
+                    color: context.appTextPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _supportInfoTile(
+              context,
+              label: 'Your ID',
+              value: userId,
+              icon: Icons.badge_rounded,
+            ),
+            const SizedBox(height: 12),
+            _supportInfoTile(
+              context,
+              label: 'Support Email',
+              value: 'glowup.officialapp@gmail.com',
+              icon: Icons.mail_outline_rounded,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Include your ID when contacting support for faster assistance.',
+              style: TextStyle(
+                color: context.appTextSecondary,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _supportInfoTile(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.appBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.appDivider),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: context.appTextSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: context.appTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _shareApp() {
     SharePlus.instance.share(
       ShareParams(
@@ -348,57 +471,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _openPrivacyPolicy(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-    );
-  }
-
-  void _confirmDeleteAll(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.appCardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Delete all data?',
-          style: TextStyle(
-            color: context.appTextPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          'This will reset all your progress, streaks, and settings. This action cannot be undone.',
-          style: TextStyle(color: context.appTextSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: context.appTextSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await DataService().clearAllData();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const OnboardingScreen(),
-                  ),
-                  (route) => false,
-                );
-              }
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -517,9 +589,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       await AuthService().deleteAccount();
-      await DataService().clearAllData();
+      await DataService().clearAuthState();
       if (context.mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // dismiss loading
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const OnboardingScreen()),
           (route) => false,
@@ -528,30 +600,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } on FirebaseAuthException catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AuthService.friendlyError(e)),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        _showErrorSnackbar(context, AuthService.friendlyError(e));
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to delete account. Please try again.'),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        _showErrorSnackbar(
+            context, e.toString().contains('cancelled')
+                ? 'Account deletion cancelled.'
+                : 'Failed to delete account. Please try again.');
       }
     }
+  }
+
+  void _showErrorSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   Widget _buildThemeOption(

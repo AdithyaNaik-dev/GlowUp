@@ -415,7 +415,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 leaderboard.add({
                   'rank': i + 1,
                   'uid': docs[i].id,
-                  'name': data['name'] ?? 'User',
+                  'firebaseUid': data['firebaseUid'] ?? '',
+                  'displayName': data['displayName'] ?? data['name'] ?? 'User',
+                  'userId': data['userId'] ?? '',
                   'points': data['points'] ?? 0,
                   'streak': data['streak'] ?? 0,
                 });
@@ -424,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Map<String, dynamic>? myEntry;
               if (user != null) {
                 for (final e in leaderboard) {
-                  if (e['uid'] == user.uid) {
+                  if (e['firebaseUid'] == user.uid) {
                     myEntry = e;
                     break;
                   }
@@ -481,96 +483,278 @@ class _HomeScreenState extends State<HomeScreen> {
     if (isSignedIn) {
       return leaderboardContent;
     } else {
-      return Stack(
-        children: [
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-            child: Opacity(
-              opacity: 0.6,
-              child: IgnorePointer(child: leaderboardContent),
+      return _buildLockedLeaderboard();
+    }
+  }
+
+  Widget _buildLockedLeaderboard() {
+    final fakeNames = ['Alex', 'Jordan', 'Sam', 'Riley', 'Morgan'];
+    final fakePoints = [1240, 980, 870, 650, 420];
+    final fakeStreaks = [14, 10, 7, 5, 3];
+
+    final fakeContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.leaderboard_rounded,
+                color: AppColors.primary, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              'Leaderboard',
+              style: TextStyle(
+                color: context.appTextPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: context.appCardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.appDivider),
           ),
-          Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                  20, 24, 20, MediaQuery.of(context).viewPadding.bottom + 24),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 520),
-                padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: context.appCardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(20),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withAlpha(15),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _fakePodiumItem(fakeNames[1], fakePoints[1], 2, 60),
+                    _fakePodiumItem(fakeNames[0], fakePoints[0], 1, 80),
+                    _fakePodiumItem(fakeNames[2], fakePoints[2], 3, 50),
                   ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.lock_rounded,
-                        size: 48, color: AppColors.primary),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Sign in to unlock leaderboard',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: context.appTextPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+              ),
+              const Divider(height: 1),
+              for (int i = 3; i < 5; i++)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom:
+                          BorderSide(color: context.appDivider, width: 0.5),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Compete with friends and track your ranking!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: context.appTextHint,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .push(
-                                MaterialPageRoute(
-                                    builder: (_) => const AuthScreen()),
-                              )
-                              .then((_) => setState(() {}));
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(56),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          'Sign In',
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        child: Text(
+                          '#${i + 1}',
                           style: TextStyle(
-                            fontSize: 16,
+                            color: context.appTextHint,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Icon(Icons.star_rounded,
+                          color: context.appTextHint, size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fakeNames[i],
+                              style: TextStyle(
+                                color: context.appTextPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Icon(Icons.local_fire_department_rounded,
+                                    color: const Color(0xFFFF9800),
+                                    size: 13),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${fakeStreaks[i]} streak',
+                                  style: TextStyle(
+                                    color: context.appTextHint,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: context.appSurface,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${fakePoints[i]} pts',
+                          style: TextStyle(
+                            color: context.appTextSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    return Stack(
+      children: [
+        IgnorePointer(
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: fakeContent,
+          ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(20),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lock_rounded,
+                      size: 32, color: AppColors.primary),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Sign in to access Leaderboard',
+                  style: TextStyle(
+                    color: context.appTextPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Compete with others and track your rank',
+                  style: TextStyle(
+                    color: context.appTextSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context)
+                        .push(MaterialPageRoute(
+                            builder: (_) => const AuthScreen()))
+                        .then((_) => setState(() {}));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      );
-    }
+        ),
+      ],
+    );
+  }
+
+  Widget _fakePodiumItem(String name, int points, int rank, double height) {
+    final color = _rankColor(rank);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_rankIcon(rank), color: color, size: 30),
+        const SizedBox(height: 6),
+        Text(
+          name,
+          style: TextStyle(
+            color: context.appTextPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 60,
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color.withAlpha(60), color.withAlpha(25)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(10),
+              topRight: Radius.circular(10),
+            ),
+            border: Border.all(color: color.withAlpha(50)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '#$rank',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                '$points pts',
+                style: TextStyle(
+                  color: context.appTextSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   IconData _rankIcon(int rank) {
@@ -677,7 +861,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _podiumItem(Map<String, dynamic> entry, double height, Color color,
       String? currentUserId) {
-    final isYou = entry['uid'] == currentUserId;
+    final isYou = entry['firebaseUid'] == currentUserId;
     final rank = entry['rank'] as int;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -685,7 +869,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Icon(_rankIcon(rank), color: _rankColor(rank), size: 30),
         const SizedBox(height: 6),
         Text(
-          isYou ? 'You' : entry['name'] as String,
+          isYou ? 'You' : entry['displayName'] as String,
           style: TextStyle(
             color: isYou ? AppColors.primary : context.appTextPrimary,
             fontSize: 13,
@@ -735,7 +919,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _leaderboardRow(
       Map<String, dynamic> entry, String? currentUserId) {
-    final isYou = entry['uid'] == currentUserId;
+    final isYou = entry['firebaseUid'] == currentUserId;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -769,7 +953,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isYou ? 'You' : entry['name'] as String,
+                  isYou ? 'You' : entry['displayName'] as String,
                   style: TextStyle(
                     color: isYou
                         ? AppColors.primary

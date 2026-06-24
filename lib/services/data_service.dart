@@ -214,78 +214,160 @@ class DataService {
     await _updatePointsInFirestore();
   }
 
+  String _generateUserId(String name) {
+    String normalized = name.toLowerCase().trim().replaceAll(RegExp(r'\s+'), '_');
+    return normalized.replaceAll(RegExp(r'[^a-z0-9_]'), '');
+  }
+
   Future<void> syncToFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
-    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final docSnap = await docRef.get();
-    
-    String name = userName;
-    if (name.trim().isEmpty) name = user.displayName ?? '';
-    if (name.trim().isEmpty) name = user.email?.split('@').first ?? 'User';
 
-    if (!docSnap.exists) {
-      await docRef.set({
-        'name': name,
-        'email': user.email ?? '',
-        'photoUrl': user.photoURL ?? '',
-        'points': points,
-        'streak': currentStreak,
-        'lastActive': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } else {
-      final data = docSnap.data() as Map<String, dynamic>;
-      int firestoreStreak = data['streak'] ?? 0;
-      int firestorePoints = data['points'] ?? 0;
-      
-      if (data['lastActive'] != null) {
-        final lastActiveDate = (data['lastActive'] as Timestamp).toDate();
-        final now = DateTime.now();
-        final lastActiveDay = DateTime(lastActiveDate.year, lastActiveDate.month, lastActiveDate.day);
-        final currentDay = DateTime(now.year, now.month, now.day);
-        
-        final difference = currentDay.difference(lastActiveDay).inDays;
-        
-        if (difference == 1) {
-          firestoreStreak++;
-        } else if (difference > 1) {
-          firestoreStreak = 0;
-        }
+    String displayName = userName;
+    if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
+    if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
+
+    // Check if we have a cached userId (from previous login)
+    String cachedUserId = _prefs?.getString('firestore_user_id') ?? '';
+
+    // Try to find existing document by firebaseUid first
+    String userId = cachedUserId;
+    DocumentSnapshot? docSnap;
+    DocumentReference? docRef;
+
+    if (cachedUserId.isNotEmpty) {
+      // Use cached userId
+      docRef = FirebaseFirestore.instance.collection('users').doc(cachedUserId);
+      docSnap = await docRef.get();
+    }
+
+    if (docSnap == null || !docSnap.exists) {
+      // Try to find by firebaseUid query
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('firebaseUid', isEqualTo: user.uid)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        // Found existing document - use its userId
+        docSnap = query.docs.first;
+        userId = docSnap.id;
+        docRef = docSnap.reference;
+        // Cache this userId for next time
+        await _prefs?.setString('firestore_user_id', userId);
       } else {
-        firestoreStreak = 0;
-      }
-
-      final mergedStreak = currentStreak > firestoreStreak ? currentStreak : firestoreStreak;
-      
-      int maxPoints = points > firestorePoints ? points : firestorePoints;
-      
-      await docRef.set({
-        'name': name,
-        'email': user.email ?? '',
-        'photoUrl': user.photoURL ?? '',
-        'streak': mergedStreak,
-        'points': maxPoints,
-        'lastActive': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      
-      await _prefs?.setInt('current_streak', mergedStreak);
-      if (firestorePoints > points) {
-        await _prefs?.setInt('points', firestorePoints);
-      }
-      if (mergedStreak > bestStreak) {
-        await _prefs?.setInt('best_streak', mergedStreak);
+        // New user - generate new userId
+        userId = _generateUserId(displayName);
+        docRef = FirebaseFirestore.instance.collection('users').doc(userId);
+        docSnap = await docRef.get();
+        // Cache this userId
+        await _prefs?.setString('firestore_user_id', userId);
       }
     }
+
+    if (!docSnap.exists) {
+      // New user — push local data to Firestore
+      final data = {
+        'firebaseUid': user.uid,
+        'userId': userId,
+        'displayName': displayName,
+        'email': user.email ?? '',
+        'points': points,
+        'streak': currentStreak,
+        'bestStreak': bestStreak,
+        'totalWorkouts': totalWorkoutsCompleted,
+        'support': {
+          'email': 'glowup.officialapp@gmail.com',
+          'userId': userId,
+          'userEmail': user.email ?? '',
+        },
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastActive': FieldValue.serverTimestamp(),
+      };
+      if ((user.photoURL ?? '').isNotEmpty) {
+        data['photoUrl'] = user.photoURL!;
+      }
+      await docRef!.set(data);
+    } else {
+      // Existing user — merge: take the higher values
+      final data = docSnap.data() as Map<String, dynamic>;
+      final firestorePoints = data['points'] as int? ?? 0;
+      final firestoreStreak = data['streak'] as int? ?? 0;
+      final firestoreBestStreak = data['bestStreak'] as int? ?? 0;
+      final firestoreDisplayName = data['displayName'] as String? ?? '';
+      final firestoreUserId = data['userId'] as String? ?? userId;
+      final firestoreTotalWorkouts = data['totalWorkouts'] as int? ?? 0;
+
+      final mergedPoints = points > firestorePoints ? points : firestorePoints;
+      final mergedStreak = currentStreak > firestoreStreak ? currentStreak : firestoreStreak;
+      final mergedBestStreak = bestStreak > firestoreBestStreak ? bestStreak : firestoreBestStreak;
+      final mergedDisplayName = displayName.isNotEmpty ? displayName : firestoreDisplayName;
+
+      final updateData = {
+        'firebaseUid': user.uid,
+        'userId': firestoreUserId,
+        'displayName': mergedDisplayName,
+        'email': user.email ?? '',
+        'streak': mergedStreak,
+        'bestStreak': mergedBestStreak,
+        'points': mergedPoints,
+        'totalWorkouts': mergedPoints > firestorePoints ? totalWorkoutsCompleted : firestoreTotalWorkouts,
+        'support': {
+          'email': 'glowup.officialapp@gmail.com',
+          'userId': firestoreUserId,
+          'userEmail': user.email ?? '',
+        },
+        'lastActive': FieldValue.serverTimestamp(),
+      };
+      if ((user.photoURL ?? '').isNotEmpty) {
+        updateData['photoUrl'] = user.photoURL!;
+      }
+      await docRef!.update(updateData);
+
+      // Pull Firestore data into local - ALWAYS sync on fresh install
+      await _prefs?.setInt('points', mergedPoints);
+      await _prefs?.setInt('current_streak', mergedStreak);
+      await _prefs?.setInt('best_streak', mergedBestStreak);
+      await _prefs?.setString('user_name', mergedDisplayName);
+
+      // Restore completed days from Firestore if this is a fresh install
+      // (local points are 0 but Firestore has data)
+      if (points == 0 && firestorePoints > 0) {
+        // This is a fresh install with existing backend data
+        // We need to restore the workout state
+        await _restoreWorkoutProgress(firestorePoints, mergedStreak);
+      }
+    }
+  }
+
+  Future<void> _restoreWorkoutProgress(int points, int streak) async {
+    // Estimate completed days from points (each workout is ~100 points base)
+    int estimatedCompletedDays = (points / 100).round();
+    if (estimatedCompletedDays > 0) {
+      final completedDays = List.generate(estimatedCompletedDays, (i) => (i + 1).toString());
+      await _prefs?.setStringList('completed_days', completedDays);
+    }
+
+    // Restore streak
+    await _prefs?.setInt('current_streak', streak);
   }
 
   Future<void> _updatePointsInFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+
+    String displayName = userName;
+    if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
+    if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
+
+    final userId = _generateUserId(displayName);
+
+    await FirebaseFirestore.instance.collection('users').doc(userId).set({
       'points': points,
       'streak': currentStreak,
+      'bestStreak': bestStreak,
+      'totalWorkouts': totalWorkoutsCompleted,
       'lastActive': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -436,12 +518,36 @@ class DataService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+    String displayName = userName;
+    if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
+    if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
+
+    final userId = _generateUserId(displayName);
+
+    await FirebaseFirestore.instance.collection('users').doc(userId).set({
       'likedExercises': likedExerciseIds.toList(),
     }, SetOptions(merge: true));
   }
 
+  Future<void> deleteFirestoreData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      String displayName = userName;
+      if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
+      if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
+
+      final userId = _generateUserId(displayName);
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .delete();
+    } catch (_) {}
+  }
+
   Future<void> clearAllData() async {
+    await deleteFirestoreData();
     await _prefs?.clear();
   }
 }

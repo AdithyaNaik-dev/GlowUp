@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'data_service.dart';
 
@@ -9,8 +10,6 @@ class AuthService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-
-  // ── Getters ──
 
   User? get currentUser => _auth.currentUser;
   bool get isSignedIn => _auth.currentUser != null;
@@ -44,7 +43,7 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null; // user cancelled
+    if (googleUser == null) return null;
 
     final GoogleSignInAuthentication googleAuth =
         await googleUser.authentication;
@@ -66,39 +65,51 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // ── Delete Account (Play Store compliance) ──
+  // ── Delete Account ──
 
   Future<void> deleteAccount() async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) throw Exception('No user signed in.');
 
-    try {
-      await user.delete();
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        // Re-authenticate before delete
-        // For Google users
-        if (user.providerData.any((p) => p.providerId == 'google.com')) {
-          final googleUser = await _googleSignIn.signIn();
-          if (googleUser != null) {
-            final googleAuth = await googleUser.authentication;
-            final credential = GoogleAuthProvider.credential(
-              accessToken: googleAuth.accessToken,
-              idToken: googleAuth.idToken,
-            );
-            await user.reauthenticateWithCredential(credential);
-            await user.delete();
-          }
-        }
-        // For Email/Password users, rethrow – caller must handle
-        else {
-          rethrow;
-        }
-      } else {
-        rethrow;
-      }
+    // Step 1: Re-authenticate first (required by Firebase for destructive ops)
+    await _reauthenticate(user);
+
+    // Step 2: Delete all Firestore documents for this user (by firebaseUid)
+    // Query all documents where firebaseUid matches current user
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('firebaseUid', isEqualTo: user.uid)
+        .get();
+
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
     }
+
+    // Step 3: Delete Firebase Auth account
+    await user.delete();
+
+    // Step 4: Sign out of Google
     await _googleSignIn.signOut();
+  }
+
+  Future<void> _reauthenticate(User user) async {
+    final isGoogle =
+        user.providerData.any((p) => p.providerId == 'google.com');
+
+    if (isGoogle) {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) throw Exception('Re-authentication cancelled.');
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await user.reauthenticateWithCredential(credential);
+    }
+    // Email/password users: Firebase only requires recent login,
+    // if the session is fresh enough it will just work.
+    // If not, user.delete() will throw requires-recent-login.
   }
 
   // ── Friendly error messages ──
@@ -123,6 +134,8 @@ class AuthService {
         return 'This account has been disabled.';
       case 'requires-recent-login':
         return 'Please sign in again to complete this action.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email. Try a different sign-in method.';
       default:
         return e.message ?? 'An unexpected error occurred.';
     }
