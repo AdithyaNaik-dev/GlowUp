@@ -214,20 +214,12 @@ class DataService {
     await _updatePointsInFirestore();
   }
 
-  String _generateUserId(String name, String email) {
-    String normalized = name.toLowerCase().trim().replaceAll(RegExp(r'\s+'), '_');
-    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9_]'), '');
-
-    // Extract email prefix and domain for uniqueness
-    final emailParts = email.split('@');
-    final emailPrefix = emailParts[0].toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-    // Combine name and email prefix for unique ID
-    // Example: "adi_adithya2005an" or "rup_rupesh123"
-    if (normalized.isEmpty) {
-      return emailPrefix;
-    }
-    return '${normalized}_$emailPrefix';
+  String _generateUserId(String email) {
+    // Use email as the unique identifier (guaranteed unique per OAuth account)
+    // Remove everything after @ and special characters
+    // Example: "adithya2005an@gmail.com" → "adithya2005an"
+    final emailPrefix = email.split('@')[0].toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    return emailPrefix.isEmpty ? 'user' : emailPrefix;
   }
 
   Future<void> syncToFirestore() async {
@@ -268,8 +260,8 @@ class DataService {
         // Cache this userId for next time
         await _prefs?.setString('firestore_user_id', userId);
       } else {
-        // New user - generate new userId
-        userId = _generateUserId(displayName, user.email ?? '');
+        // New user - generate new userId from email (unique identifier)
+        userId = _generateUserId(user.email ?? '');
         docRef = FirebaseFirestore.instance.collection('users').doc(userId);
         docSnap = await docRef.get();
         // Cache this userId
@@ -368,11 +360,7 @@ class DataService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    String displayName = userName;
-    if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
-    if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
-
-    final userId = _generateUserId(displayName, user.email ?? '');
+    final userId = _generateUserId(user.email ?? '');
 
     await FirebaseFirestore.instance.collection('users').doc(userId).set({
       'points': points,
@@ -529,11 +517,7 @@ class DataService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    String displayName = userName;
-    if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
-    if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
-
-    final userId = _generateUserId(displayName, user.email ?? '');
+    final userId = _generateUserId(user.email ?? '');
 
     await FirebaseFirestore.instance.collection('users').doc(userId).set({
       'likedExercises': likedExerciseIds.toList(),
@@ -544,11 +528,7 @@ class DataService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      String displayName = userName;
-      if (displayName.trim().isEmpty) displayName = user.displayName ?? '';
-      if (displayName.trim().isEmpty) displayName = user.email?.split('@').first ?? 'User';
-
-      final userId = _generateUserId(displayName, user.email ?? '');
+      final userId = _generateUserId(user.email ?? '');
 
       await FirebaseFirestore.instance
           .collection('users')
