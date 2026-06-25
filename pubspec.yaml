@@ -45,6 +45,8 @@ flutter:
     - assets/data/exercise_plan.json
     - assets/images/logo.jpeg
     - assets/images/glowup-humans.png
+    - assets/images/excersise/face/
+    - assets/images/excersise/body/
     - assets/animation/onboarding1.lottie
     - assets/animation/onboarding2.lottie
     - assets/animation/onboarding3.lottie
