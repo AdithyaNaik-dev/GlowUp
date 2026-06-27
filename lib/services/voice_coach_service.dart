@@ -218,10 +218,12 @@ class VoiceCoachService {
     parts.add(voiceInstruction);
 
     if (isTimerBased) {
-      parts.add('Hold for $targetDuration seconds. Ready? Go!');
+      parts.add('Hold for $targetDuration seconds.');
     } else {
-      parts.add('Do $targetReps reps. Let\'s go!');
+      parts.add('Do $targetReps reps.');
     }
+
+    parts.add('Take your position.');
 
     await speakInstruction(parts.join('. '));
   }
@@ -325,6 +327,34 @@ class VoiceCoachService {
     _lastSpoken = text;
     _lastSpokenTime = now;
     await _maybeSpeak(text);
+  }
+
+  // ─── Ready flow ───
+  Future<void> announceStayStill() async {
+    if (_isSpeaking) return;
+    await _maybeSpeak("Stay still.");
+  }
+
+  Future<void> announceGo() async {
+    await _flutterTts.stop();
+    await _maybeSpeak("Go!");
+  }
+
+  // ─── Stuck rescue ───
+  // Stage 1: gentle nudge to move bigger. Fired once per stuck episode.
+  Future<void> nudgeBiggerMovement() async {
+    if (_isSpeaking) return;
+    await _maybeSpeak("Try making the movement a little bigger and slower.");
+  }
+
+  // Stage 2: acknowledge detection trouble and point to the on-screen buttons.
+  Future<void> announceDetectionTrouble() async {
+    await _flutterTts.stop();
+    await _maybeSpeak(
+      "You might be doing it a little differently, or I can't see it clearly. "
+      "If you have finished, tap Next to move on. "
+      "Or tap the i button to learn how to do this exercise.",
+    );
   }
 
   Future<void> announceRest(int seconds, String nextExerciseName) async {

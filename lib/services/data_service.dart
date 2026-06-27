@@ -102,6 +102,13 @@ class DataService {
     await _prefs?.setBool('onboarding_complete', true);
   }
 
+  bool get hasSeenWorkoutTutorial =>
+      _prefs?.getBool('workout_tutorial_seen') ?? false;
+
+  Future<void> setWorkoutTutorialSeen() async {
+    await _prefs?.setBool('workout_tutorial_seen', true);
+  }
+
   int get currentDay => _prefs?.getInt('current_day') ?? 1;
 
   Future<void> setCurrentDay(int day) async {

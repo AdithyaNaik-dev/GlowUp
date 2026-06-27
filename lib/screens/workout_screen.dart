@@ -22,7 +22,7 @@ class WorkoutScreen extends StatefulWidget {
 }
 
 class _WorkoutScreenState extends State<WorkoutScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final DataService _dataService = DataService();
   final VoiceCoachService _voiceCoach = VoiceCoachService();
   late List<Exercise> _exercises;
@@ -44,9 +44,24 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   Timer? _tipTimer;
   bool _isVoiceMuted = false;
 
+  // "Take your position" countdown before every exercise
+  bool _isCountingDown = false;
+  int _countdownSeconds = 3;
+  Timer? _countdownTimer;
+
+  // Two-stage stuck rescue: if no rep is counted for a while, nudge + loosen
+  // detection (stage 1), then give voice guidance pointing to Next / ⓘ (stage 2).
+  Timer? _stuckTimer;
+  DateTime? _lastRepWallTime;
+  bool _stuckStage1Fired = false;
+  bool _stuckStage2Fired = false;
+  int _sensitivityBoost = 0;
+  bool _trackingStarted = false; // true once the rep counter enters tracking phase
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _voiceCoach.resetSession();
     _exercises = _dataService.getExercisesForDayWithReps(widget.day);
     final plan = _dataService.getDayPlan(widget.day);
@@ -55,12 +70,27 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _tickTimer?.cancel();
     _exerciseTimer?.cancel();
     _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
     _voiceCoach.stop();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // User switched to another app — pause everything so they can resume.
+      if (_isStarted && !_isPaused) {
+        setState(() => _isPaused = true);
+        _voiceCoach.stop();
+      }
+    }
   }
 
   ExerciseMode _getMode(Exercise ex) => getExerciseMode(ex.name);
@@ -68,6 +98,17 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   bool _isFace(Exercise ex) => isFaceExercise(ex.name);
 
   void _startWorkout() {
+    if (!_dataService.hasSeenWorkoutTutorial) {
+      _showWorkoutTutorial(() {
+        _dataService.setWorkoutTutorialSeen();
+        _beginWorkout();
+      });
+      return;
+    }
+    _beginWorkout();
+  }
+
+  void _beginWorkout() {
     setState(() {
       _isStarted = true;
       _isResting = false;
@@ -76,24 +117,54 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _startExercise(_exercises[_currentIndex], isFirst: true);
   }
 
+  void _showWorkoutTutorial(VoidCallback onDone) {
+    final steps = <_TutorialStep>[
+      _TutorialStep(
+        icon: Icons.phone_android_rounded,
+        title: 'Setup',
+        body: 'For face exercises, just hold your phone and look at the camera. For body exercises, lean your phone against a wall and step back so your full body is visible.',
+      ),
+      _TutorialStep(
+        icon: Icons.pan_tool_rounded,
+        title: 'Stay still',
+        body: 'Once the app detects you, it will say "Stay still." Hold your natural position for a moment while it learns your baseline.',
+      ),
+      _TutorialStep(
+        icon: Icons.play_circle_rounded,
+        title: 'Go!',
+        body: 'When you hear "Go!" start the exercise. The AI counts your reps automatically. Even small movements count!',
+      ),
+      _TutorialStep(
+        icon: Icons.skip_next_rounded,
+        title: 'Stuck? No worries',
+        body: 'If the AI can\'t detect your movement, just tap Next to move on. Tap the ⓘ button anytime to learn how to do an exercise.',
+      ),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _WorkoutTutorialSheet(steps: steps, onDone: onDone),
+    );
+  }
+
   void _startExercise(Exercise exercise, {bool isFirst = false}) {
     _repCount = 0;
     _exerciseTimerSeconds = 0;
+    _exerciseTimer?.cancel();
+    _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
+    _stuckStage1Fired = false;
+    _stuckStage2Fired = false;
+    _trackingStarted = false;
 
     final mode = _getMode(exercise);
 
-    if (mode == ExerciseMode.timerBased) {
-      _exerciseTimerSeconds = exercise.duration;
-      _startExerciseCountdown(exercise);
-    }
-
-    _tipTimer?.cancel();
-    _tipTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-      if (!_isPaused && !_isResting) {
-        _voiceCoach.giveRandomTip();
-      }
-    });
-
+    // Voice: exercise name + instruction, then "Take your position"
     _voiceCoach.announceExerciseStart(
       exerciseName: exercise.name,
       voiceInstruction: exercise.voiceInstruction,
@@ -104,7 +175,50 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       isFirstExercise: isFirst,
     );
 
-    setState(() {});
+    // Start the 3-2-1 countdown. During this time the camera is already
+    // running — MediaPipe detects the user and calibrates their baseline.
+    setState(() {
+      _isCountingDown = true;
+      _countdownSeconds = 3;
+    });
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_isPaused) return;
+
+      setState(() {
+        if (_countdownSeconds > 1) {
+          _countdownSeconds--;
+          SystemSound.play(SystemSoundType.click);
+        } else {
+          // Countdown done — start the exercise
+          timer.cancel();
+          _isCountingDown = false;
+          _voiceCoach.announceGo();
+          _onCountdownComplete(exercise);
+        }
+      });
+    });
+  }
+
+  void _onCountdownComplete(Exercise exercise) {
+    final mode = _getMode(exercise);
+
+    // Start timer for hold exercises
+    if (mode == ExerciseMode.timerBased) {
+      _exerciseTimerSeconds = exercise.duration;
+      _startExerciseCountdown(exercise);
+    }
+
+    // Random tips
+    _tipTimer?.cancel();
+    _tipTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!_isPaused && !_isResting) {
+        _voiceCoach.giveRandomTip();
+      }
+    });
+
+    // For AI-tracked, the stuck timer is armed when tracking phase starts
+    // (handled in _onTrackingSnapshot). For timer-based, no stuck timer needed.
   }
 
   void _startExerciseCountdown(Exercise exercise) {
@@ -162,6 +276,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _isExerciseTransitioning = true;
     _exerciseTimer?.cancel();
     _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
+    _isCountingDown = false;
 
     if (_currentIndex < _exercises.length - 1) {
       setState(() {
@@ -180,6 +297,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _timer?.cancel();
     _exerciseTimer?.cancel();
     _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
+    _isCountingDown = false;
     if (_currentIndex < _exercises.length - 1) {
       setState(() {
         _currentIndex++;
@@ -190,6 +310,32 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     } else {
       _completeWorkout();
     }
+  }
+
+  void _previousExercise() {
+    if (_currentIndex <= 0) return;
+    _timer?.cancel();
+    _exerciseTimer?.cancel();
+    _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
+    _isCountingDown = false;
+    setState(() {
+      _currentIndex--;
+      _isResting = true;
+      _isPaused = false;
+    });
+    _startRestTimer();
+  }
+
+  void _restartExercise() {
+    _exerciseTimer?.cancel();
+    _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
+    _isCountingDown = false;
+    _voiceCoach.stop();
+    _startExercise(_exercises[_currentIndex]);
   }
 
   Future<void> _toggleVoiceMute() async {
@@ -205,11 +351,44 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     });
   }
 
+  // Runs once per second while an AI-tracked exercise is active. If the user
+  // has gone too long without a counted rep, escalate help in two stages.
+  void _checkStuck() {
+    if (!mounted || _isPaused || _isResting) return;
+    final last = _lastRepWallTime;
+    if (last == null) return;
+    final stuckSecs = DateTime.now().difference(last).inSeconds;
+
+    if (stuckSecs >= 20 && !_stuckStage2Fired) {
+      _stuckStage2Fired = true;
+      // Voice only — points to the always-visible Next and ⓘ buttons.
+      _voiceCoach.announceDetectionTrouble();
+    } else if (stuckSecs >= 10 && !_stuckStage1Fired) {
+      _stuckStage1Fired = true;
+      setState(() => _sensitivityBoost++); // loosen detection one notch
+      _voiceCoach.nudgeBiggerMovement();
+    }
+  }
+
   void _onTrackingSnapshot(TrackingSnapshot snapshot, Exercise exercise) {
     if (!mounted || _isResting) return;
 
     final mode = _getMode(exercise);
     if (mode == ExerciseMode.timerBased) return;
+
+    // ── Phase transitions: voice cues at the right moments ──
+    if (snapshot.phase == TrackingPhase.calibrating && !_trackingStarted) {
+      _voiceCoach.announceStayStill();
+    }
+    if (snapshot.justStartedTracking && !_trackingStarted) {
+      _trackingStarted = true;
+      _voiceCoach.announceGo();
+      // NOW arm the stuck-rescue clock — user is actually exercising.
+      _lastRepWallTime = DateTime.now();
+      _stuckTimer?.cancel();
+      _stuckTimer =
+          Timer.periodic(const Duration(seconds: 1), (_) => _checkStuck());
+    }
 
     final repIncreased = snapshot.repCount > _repCount;
 
@@ -218,6 +397,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     });
 
     if (repIncreased) {
+      _lastRepWallTime = DateTime.now();
+      _stuckStage1Fired = false;
+      _stuckStage2Fired = false;
       SystemSound.play(SystemSoundType.click);
       _voiceCoach.announceRep(snapshot.repCount, exercise.reps);
     }
@@ -235,6 +417,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _timer?.cancel();
     _exerciseTimer?.cancel();
     _tipTimer?.cancel();
+    _stuckTimer?.cancel();
+    _countdownTimer?.cancel();
+    _isCountingDown = false;
     _voiceCoach.announceComplete();
     await _dataService.completeDay(widget.day);
     if (mounted) {
@@ -418,11 +603,49 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             _buildExerciseHeader(exercise, mode),
             const SizedBox(height: 10),
             Expanded(
-              child: ExerciseCameraTracker(
-                exercise: exercise,
-                isPaused: _isPaused,
-                onSnapshot: (snapshot) =>
-                    _onTrackingSnapshot(snapshot, exercise),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ExerciseCameraTracker(
+                      exercise: exercise,
+                      isPaused: _isPaused,
+                      sensitivityBoost: _sensitivityBoost,
+                      onSnapshot: (snapshot) =>
+                          _onTrackingSnapshot(snapshot, exercise),
+                    ),
+                  ),
+                  if (_isCountingDown)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(160),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Get Ready',
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(200),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '$_countdownSeconds',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 72,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
@@ -1038,52 +1261,24 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        GestureDetector(
-          onTap: _toggleVoiceMute,
-          child: Column(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: (_isVoiceMuted
-                          ? context.appSurface
-                          : AppColors.primary)
-                      .withAlpha(20),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: (_isVoiceMuted
-                              ? context.appDivider
-                              : AppColors.primary)
-                          .withAlpha(40)),
-                ),
-                child: Icon(
-                  _isVoiceMuted
-                      ? Icons.volume_off_rounded
-                      : Icons.volume_up_rounded,
-                  color: _isVoiceMuted
-                      ? context.appTextHint
-                      : AppColors.primary,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _isVoiceMuted ? 'Muted' : 'Voice',
-                style: TextStyle(
-                  color: context.appTextSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+        _controlButton(
+          Icons.skip_previous_rounded,
+          'Back',
+          _currentIndex > 0 ? context.appTextSecondary : context.appTextHint,
+          _currentIndex > 0 ? _previousExercise : null,
         ),
+        _controlButton(
+          Icons.replay_rounded,
+          'Restart',
+          context.appTextSecondary,
+          _restartExercise,
+        ),
+        // Center pause/play button
         GestureDetector(
           onTap: _togglePause,
           child: Container(
-            width: 72,
-            height: 72,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
@@ -1098,15 +1293,21 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             child: Icon(
               _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
               color: Colors.white,
-              size: 36,
+              size: 32,
             ),
           ),
         ),
         _controlButton(
           Icons.skip_next_rounded,
           'Next',
-          AppColors.primary,
+          context.appTextSecondary,
           _nextExercise,
+        ),
+        _controlButton(
+          _isVoiceMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+          _isVoiceMuted ? 'Muted' : 'Voice',
+          _isVoiceMuted ? context.appTextHint : context.appTextSecondary,
+          _toggleVoiceMute,
         ),
       ],
     );
@@ -1116,7 +1317,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     IconData icon,
     String label,
     Color color,
-    VoidCallback onTap,
+    VoidCallback? onTap,
   ) {
     return GestureDetector(
       onTap: onTap,
@@ -1178,6 +1379,153 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             child: const Text(
               'Quit',
               style: TextStyle(color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  First-time workout tutorial (shown once, before the first workout)
+// ═══════════════════════════════════════════════════════════════════
+
+class _TutorialStep {
+  final IconData icon;
+  final String title;
+  final String body;
+  const _TutorialStep({required this.icon, required this.title, required this.body});
+}
+
+class _WorkoutTutorialSheet extends StatefulWidget {
+  final List<_TutorialStep> steps;
+  final VoidCallback onDone;
+  const _WorkoutTutorialSheet({required this.steps, required this.onDone});
+
+  @override
+  State<_WorkoutTutorialSheet> createState() => _WorkoutTutorialSheetState();
+}
+
+class _WorkoutTutorialSheetState extends State<_WorkoutTutorialSheet> {
+  int _current = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final step = widget.steps[_current];
+    final isLast = _current == widget.steps.length - 1;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Title
+          Text(
+            'How It Works',
+            style: TextStyle(
+              color: context.appTextPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Step icon
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(step.icon, color: AppColors.primary, size: 36),
+          ),
+          const SizedBox(height: 16),
+          // Step title
+          Text(
+            step.title,
+            style: TextStyle(
+              color: context.appTextPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Step body
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              step.body,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.appTextSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.steps.length, (i) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: i == _current ? 24 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: i == _current
+                      ? AppColors.primary
+                      : AppColors.primary.withAlpha(40),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 24),
+          // Button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {
+                if (isLast) {
+                  Navigator.pop(context);
+                  widget.onDone();
+                } else {
+                  setState(() => _current++);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                isLast ? "Let's Go!" : 'Next',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
